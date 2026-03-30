@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, BedDouble, Maximize, ArrowRight, Wifi, Wind, Tv, Coffee, Waves, Trees, ParkingCircle, Bath, Utensils } from 'lucide-react';
+import { Users, BedDouble, Maximize, ArrowRight, Wifi, Wind, Tv, Coffee, Waves, Trees, ParkingCircle, Bath, Utensils, type LucideIcon } from 'lucide-react';
 import type { RoomType } from '@/types';
 import { formatBRL } from '@/lib/booking';
 
 // Mapeamento de nome de ícone (string) para componente Lucide
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   wifi: Wifi,
   'air-vent': Wind,
   tv: Tv,
