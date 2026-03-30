@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, BedDouble, Maximize, ArrowRight, Wifi, Wind, Tv, Coffee, Waves, Trees, ParkingCircle, Bath, Utensils, type LucideIcon } from 'lucide-react';
+import { Users, BedDouble, Maximize, ArrowRight, Wifi, Wind, Tv, Coffee, Waves, Trees, ParkingCircle, Bath, Utensils, Fan, Snowflake, Refrigerator, Sun, type LucideIcon } from 'lucide-react';
 import type { RoomType } from '@/types';
 import { formatBRL } from '@/lib/booking';
 
@@ -16,6 +16,11 @@ const ICON_MAP: Record<string, LucideIcon> = {
   trees: Trees,
   'parking-circle': ParkingCircle,
   utensils: Utensils,
+  fan: Fan,
+  refrigerator: Refrigerator,
+  hammock: Sun,
+  'bed-double': BedDouble,
+  snowflake: Snowflake,
 };
 
 function AmenityIcon({ name, label }: { name: string; label: string }) {
@@ -72,6 +77,7 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
             {room.images.map((_, i) => (
               <button
+                type="button"
                 key={i}
                 onClick={() => setImgIdx(i)}
                 aria-label={`Ver foto ${i + 1}`}

@@ -44,12 +44,12 @@ export default function RoomsSection({ searchParams, onBook }: RoomsSectionProps
             className="text-[var(--color-text)] mb-3"
             style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', fontWeight: 600 }}
           >
-            Escolha o seu quarto
+            Acomodações da Pousada Viva Mar
           </h2>
           <p className="text-[var(--color-text-muted)]" style={{ fontSize: 'var(--text-base)' }}>
             {searchParams?.checkIn && searchParams?.checkOut
               ? `Disponibilidade para ${new Date(searchParams.checkIn).toLocaleDateString('pt-BR')} — ${new Date(searchParams.checkOut).toLocaleDateString('pt-BR')}${searchParams.guests ? `, ${searchParams.guests} hóspede${searchParams.guests > 1 ? 's' : ''}` : ''}`
-              : 'Todos os quartos com café da manhã incluso e acesso à praia.'}
+              : '3 categorias de apartamentos com conforto, varanda e clima praiano em Saquarema.'}
           </p>
         </div>
 

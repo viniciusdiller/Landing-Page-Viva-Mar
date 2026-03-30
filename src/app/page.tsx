@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import RoomsSection from '@/components/RoomsSection';
 import SaasFeatures from '@/components/SaasFeatures';
+import LeisureSection from '@/components/LeisureSection';
 import Footer from '@/components/Footer';
 import CheckoutModal from '@/components/CheckoutModal';
 import type { RoomSearchParams, RoomType } from '@/types';
@@ -50,6 +51,7 @@ export default function LandingPage() {
       <Header />
       <Hero onSearch={handleSearch} />
       <RoomsSection searchParams={searchParams} onBook={handleOpenCheckout} />
+      <LeisureSection />
       <SaasFeatures />
       <Footer />
 

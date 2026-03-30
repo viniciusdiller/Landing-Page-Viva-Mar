@@ -1,154 +1,104 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { MapPin, Calendar, Users, Search } from 'lucide-react';
 import type { RoomSearchParams } from '@/types';
 
 interface SearchWidgetProps {
   onSearch: (params: RoomSearchParams) => void;
-  compact?: boolean;
 }
 
-export default function SearchWidget({ onSearch, compact = false }: SearchWidgetProps) {
+export default function SearchWidget({ onSearch }: SearchWidgetProps) {
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
   const [checkIn, setCheckIn] = useState(today);
   const [checkOut, setCheckOut] = useState(tomorrow);
   const [guests, setGuests] = useState(2);
+  const [showError, setShowError] = useState(false);
+
+  const hasDateError = useMemo(() => new Date(checkOut) <= new Date(checkIn), [checkIn, checkOut]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSearch({ destination: 'Pousada Viva Mar', checkIn, checkOut, guests });
-    // Rola até a vitrine de quartos
+    if (hasDateError) {
+      setShowError(true);
+      return;
+    }
+
+    setShowError(false);
+    onSearch({
+      destination: 'Pousada Viva Mar - Saquarema',
+      checkIn,
+      checkOut,
+      guests,
+    });
     document.getElementById('quartos')?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  const baseInputStyle = {
-    background: 'white',
-    border: 'none',
-    borderRadius: 0,
-    fontSize: 'var(--text-sm)',
-    padding: '0.75rem 1rem 0.75rem 2.5rem',
-    color: 'var(--color-text)',
-    width: '100%',
-    minHeight: '56px',
-    outline: 'none',
-  } as React.CSSProperties;
+  const fieldClass = `relative flex-1 border-b md:border-b-0 md:border-r border-[var(--color-border)]`;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      aria-label="Buscar quartos disponíveis"
-      style={{
-        background: 'white',
-        borderRadius: 'var(--radius-xl)',
-        boxShadow: '0 8px 40px oklch(0.1 0.03 220 / 0.25)',
-        overflow: 'hidden',
-        border: '1px solid oklch(1 0 0 / 0.8)',
-      }}
-    >
+    <form onSubmit={handleSubmit} className="rounded-2xl overflow-hidden border border-white/70 bg-white shadow-2xl" aria-label="Buscar quartos disponíveis na Pousada Viva Mar">
       <div className="flex flex-col md:flex-row">
-        {/* Destino (estático — é sempre a Pousada Viva Mar) */}
-        <div className="relative flex-1 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
-          <label htmlFor="search-destination" className="sr-only">Destino</label>
-          <MapPin
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)]"
-            aria-hidden="true"
-          />
-          <div style={baseInputStyle}>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Destino</div>
-            <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>Pousada Viva Mar, Florianópolis</div>
+        <div className={fieldClass}>
+          <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" aria-hidden="true" />
+          <div className="pl-10 pr-4 py-3 min-h-[56px]">
+            <label className="block text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-faint)] font-bold">Destino</label>
+            <p className="text-[var(--color-text)] font-medium text-sm">Pousada Viva Mar, Saquarema</p>
           </div>
         </div>
 
-        {/* Check-in */}
-        <div className="relative flex-1 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
-          <label htmlFor="search-checkin" className="sr-only">Data de check-in</label>
-          <Calendar
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none z-10"
-            aria-hidden="true"
-          />
-          <div className="absolute top-3 left-10" style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', pointerEvents: 'none' }}>
-            Check-in
-          </div>
+        <div className={fieldClass}>
+          <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" aria-hidden="true" />
+          <label htmlFor="checkin" className="sr-only">Check-in</label>
           <input
-            id="search-checkin"
+            id="checkin"
             type="date"
-            value={checkIn}
             min={today}
+            value={checkIn}
             onChange={(e) => setCheckIn(e.target.value)}
-            style={{ ...baseInputStyle, paddingTop: '1.75rem', paddingBottom: '0.35rem' }}
-            required
+            className="w-full min-h-[56px] pl-10 pr-3 pt-5 pb-1 text-sm outline-none"
+            aria-invalid={hasDateError}
           />
+          <span className="absolute left-10 top-2 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-faint)] font-bold">Check-in</span>
         </div>
 
-        {/* Check-out */}
-        <div className="relative flex-1 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
-          <label htmlFor="search-checkout" className="sr-only">Data de check-out</label>
-          <Calendar
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none z-10"
-            aria-hidden="true"
-          />
-          <div className="absolute top-3 left-10" style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', pointerEvents: 'none' }}>
-            Check-out
-          </div>
+        <div className={fieldClass}>
+          <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" aria-hidden="true" />
+          <label htmlFor="checkout" className="sr-only">Check-out</label>
           <input
-            id="search-checkout"
+            id="checkout"
             type="date"
+            min={checkIn}
             value={checkOut}
-            min={checkIn || today}
             onChange={(e) => setCheckOut(e.target.value)}
-            style={{ ...baseInputStyle, paddingTop: '1.75rem', paddingBottom: '0.35rem' }}
-            required
+            className={`w-full min-h-[56px] pl-10 pr-3 pt-5 pb-1 text-sm outline-none ${hasDateError ? 'text-[var(--color-error)]' : ''}`}
+            aria-invalid={hasDateError}
           />
+          <span className="absolute left-10 top-2 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-faint)] font-bold">Check-out</span>
         </div>
 
-        {/* Hóspedes */}
-        <div className="relative flex-1 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
-          <label htmlFor="search-guests" className="sr-only">Número de hóspedes</label>
-          <Users
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none z-10"
-            aria-hidden="true"
-          />
-          <div className="absolute top-3 left-10" style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', pointerEvents: 'none' }}>
-            Hóspedes
-          </div>
-          <select
-            id="search-guests"
-            value={guests}
-            onChange={(e) => setGuests(Number(e.target.value))}
-            style={{ ...baseInputStyle, paddingTop: '1.75rem', paddingBottom: '0.35rem', cursor: 'pointer' }}
-          >
+        <div className={`${fieldClass} md:border-r-0`}>
+          <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" aria-hidden="true" />
+          <label htmlFor="guests" className="sr-only">Hóspedes</label>
+          <select id="guests" value={guests} onChange={(e) => setGuests(Number(e.target.value))} className="w-full min-h-[56px] pl-10 pr-3 pt-5 pb-1 text-sm outline-none cursor-pointer">
             {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>
-                {n} hóspede{n > 1 ? 's' : ''}
-              </option>
+              <option key={n} value={n}>{n} hóspede{n > 1 ? 's' : ''}</option>
             ))}
           </select>
+          <span className="absolute left-10 top-2 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-faint)] font-bold">Hóspedes</span>
         </div>
 
-        {/* Botão buscar */}
-        <button
-          type="submit"
-          className="btn btn-primary flex items-center justify-center gap-2"
-          style={{
-            borderRadius: '0 var(--radius-xl) var(--radius-xl) 0',
-            padding: '0 2rem',
-            minHeight: '56px',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 700,
-          }}
-          aria-label="Buscar quartos disponíveis"
-        >
-          <Search size={18} aria-hidden="true" />
-          <span className="md:hidden lg:inline">Buscar</span>
+        <button type="submit" className="btn btn-primary rounded-none md:rounded-l-none md:rounded-r-2xl min-h-[56px] px-6 justify-center" aria-label="Buscar quartos">
+          <Search size={16} /> Buscar Quartos
         </button>
       </div>
+      {showError && hasDateError && (
+        <p className="px-4 py-2 text-xs text-[var(--color-error)] bg-red-50 border-t border-red-200">
+          A data de check-out deve ser posterior ao check-in.
+        </p>
+      )}
     </form>
   );
 }

@@ -10,7 +10,7 @@ export default function Footer() {
               Pousada Viva Mar
             </h3>
             <p className="text-[var(--color-text-muted)]" style={{ fontSize: 'var(--text-sm)' }}>
-              Hospedagem boutique em Florianópolis com motor de reservas integrado ao SaaS.
+              Av. Min. Salgado Filho, 8484 - Barra Nova, Saquarema/RJ. Booking Engine integrado ao SaaS.
             </p>
           </div>
 

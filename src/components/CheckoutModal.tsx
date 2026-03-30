@@ -48,17 +48,11 @@ export default function CheckoutModal({ open, room, bookingContext, onClose }: C
     return room.pricePerNight * Math.max(1, bookingContext.nights);
   }, [room, bookingContext.nights]);
 
-  const total = Math.max(0, subtotal - discountAmount);
-
-  if (!open || !room) return null;
-
-  function updateGuest<K extends keyof GuestData>(key: K, value: GuestData[K]) {
-    setGuest((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function applyCoupon() {
+  useEffect(() => {
     if (!couponInput.trim()) {
-      setCouponMessage('Digite um cupom para aplicar.');
+      setAppliedCoupon(undefined);
+      setDiscountAmount(0);
+      setCouponMessage('');
       return;
     }
 
@@ -71,6 +65,20 @@ export default function CheckoutModal({ open, room, bookingContext, onClose }: C
       setDiscountAmount(0);
     }
     setCouponMessage(result.message);
+  }, [couponInput, bookingContext.nights, subtotal]);
+
+  const total = Math.max(0, subtotal - discountAmount);
+
+  if (!open || !room) return null;
+
+  function updateGuest<K extends keyof GuestData>(key: K, value: GuestData[K]) {
+    setGuest((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function applyCoupon() {
+    if (!couponInput.trim()) {
+      setCouponMessage('Digite um cupom para aplicar.');
+    }
   }
 
   async function handleSubmitReservation(e: React.FormEvent) {
