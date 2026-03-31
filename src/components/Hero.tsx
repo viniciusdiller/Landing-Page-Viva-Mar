@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import SearchWidget from './SearchWidget';
-import type { RoomSearchParams } from '@/types';
+import SearchWidget from "./SearchWidget";
+import type { RoomSearchParams } from "@/types";
 
 interface HeroProps {
   onSearch: (params: RoomSearchParams) => void;
@@ -9,7 +9,11 @@ interface HeroProps {
 
 export default function Hero({ onSearch }: HeroProps) {
   return (
-    <section id="hero" className="relative min-h-[96svh] flex items-center overflow-hidden" aria-label="Apresentação da Pousada Viva Mar em Saquarema">
+    <section
+      id="hero"
+      className="relative min-h-[96svh] flex items-center overflow-hidden"
+      aria-label="Apresentação da Pousada Viva Mar em Saquarema"
+    >
       <div className="absolute inset-0">
         <img
           src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80"
@@ -24,13 +28,25 @@ export default function Hero({ onSearch }: HeroProps) {
           <p className="inline-flex px-3 py-1 rounded-full text-xs uppercase tracking-[0.12em] font-semibold bg-white/15 border border-white/30 mb-5">
             Em frente à Praia da Vila • Saquarema - RJ
           </p>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem,6vw,4.8rem)', lineHeight: 1.05, fontWeight: 700 }}>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(2.5rem,6vw,4.8rem)",
+              lineHeight: 1.05,
+              fontWeight: 700,
+            }}
+          >
             Tranquilidade, natureza e mar
-            <span className="block text-[var(--color-accent)]">na melhor vista de Saquarema</span>
+            <span className="block text-[var(--color-accent)]">
+              na melhor vista de Saquarema
+            </span>
           </h1>
-          <p className="mt-5 text-white/85 max-w-2xl" style={{ fontSize: 'var(--text-base)' }}>
-            Reserve sua estadia com café da manhã no terraço panorâmico, piscina com cascata e bar pé na areia.
-            Este booking engine simula na prática o fluxo do nosso SaaS de gestão hoteleira.
+          <p
+            className="mt-5 text-white/85 max-w-2xl"
+            style={{ fontSize: "var(--text-base)" }}
+          >
+            Reserve sua estadia com café da manhã no terraço panorâmico, piscina
+            com cascata e bar pé na areia.
           </p>
         </div>
 

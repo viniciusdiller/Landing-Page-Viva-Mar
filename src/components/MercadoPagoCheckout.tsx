@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { CreditCard, QrCode, ShieldCheck } from 'lucide-react';
-import { Wallet, initMercadoPago } from '@mercadopago/sdk-react';
+import { useEffect } from "react";
+import { CreditCard, QrCode, ShieldCheck } from "lucide-react";
+import { Wallet, initMercadoPago } from "@mercadopago/sdk-react";
 
 interface MercadoPagoCheckoutProps {
   preferenceId?: string;
   publicKey?: string;
-  onStatusHint?: (status: 'pending' | 'ready') => void;
+  onStatusHint?: (status: "pending" | "ready") => void;
 }
 
 export default function MercadoPagoCheckout({
@@ -17,10 +17,10 @@ export default function MercadoPagoCheckout({
 }: MercadoPagoCheckoutProps) {
   useEffect(() => {
     if (publicKey) {
-      initMercadoPago(publicKey, { locale: 'pt-BR' });
-      onStatusHint?.('ready');
+      initMercadoPago(publicKey, { locale: "pt-BR" });
+      onStatusHint?.("ready");
     } else {
-      onStatusHint?.('pending');
+      onStatusHint?.("pending");
     }
   }, [publicKey, onStatusHint]);
 
@@ -28,10 +28,16 @@ export default function MercadoPagoCheckout({
     <section className="rounded-xl border border-[var(--color-border)] p-4 bg-[var(--color-surface-2)]">
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
-          <h4 className="mb-1" style={{ fontSize: 'var(--text-base)', fontWeight: 700 }}>
+          <h4
+            className="mb-1"
+            style={{ fontSize: "var(--text-base)", fontWeight: 700 }}
+          >
             Pagamento com Mercado Pago
           </h4>
-          <p className="text-[var(--color-text-muted)]" style={{ fontSize: 'var(--text-xs)' }}>
+          <p
+            className="text-[var(--color-text-muted)]"
+            style={{ fontSize: "var(--text-xs)" }}
+          >
             Pronto para PIX e cartão com confirmação assíncrona por webhook.
           </p>
         </div>
@@ -39,10 +45,22 @@ export default function MercadoPagoCheckout({
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <span className="badge" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
+        <span
+          className="badge"
+          style={{
+            background: "var(--color-primary-light)",
+            color: "var(--color-primary)",
+          }}
+        >
           <QrCode size={12} /> PIX
         </span>
-        <span className="badge" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
+        <span
+          className="badge"
+          style={{
+            background: "var(--color-primary-light)",
+            color: "var(--color-primary)",
+          }}
+        >
           <CreditCard size={12} /> Cartão
         </span>
       </div>
@@ -58,7 +76,7 @@ export default function MercadoPagoCheckout({
         <Wallet initialization={{ preferenceId }} />
       ) : (
         <button type="button" className="btn btn-primary w-full" disabled>
-          Pagar via PIX/Cartão Mercado Pago (modo estrutural)
+          Pagar via PIX/Cartão Mercado Pago
         </button>
       )}
     </section>

@@ -1,22 +1,23 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import Header from '@/components/Header';
-import Hero from '@/components/Hero';
-import RoomsSection from '@/components/RoomsSection';
-import SaasFeatures from '@/components/SaasFeatures';
-import LeisureSection from '@/components/LeisureSection';
-import Footer from '@/components/Footer';
-import CheckoutModal from '@/components/CheckoutModal';
-import type { RoomSearchParams, RoomType } from '@/types';
+import { useMemo, useState } from "react";
+import Header from "@/components/Header";
+import Hero from "@/components/Hero";
+import RoomsSection from "@/components/RoomsSection";
+import LeisureSection from "@/components/LeisureSection";
+import Footer from "@/components/Footer";
+import CheckoutModal from "@/components/CheckoutModal";
+import type { RoomSearchParams, RoomType } from "@/types";
 
 export default function LandingPage() {
-  const [searchParams, setSearchParams] = useState<RoomSearchParams | undefined>(undefined);
+  const [searchParams, setSearchParams] = useState<
+    RoomSearchParams | undefined
+  >(undefined);
   const [selectedRoom, setSelectedRoom] = useState<RoomType | null>(null);
   const [bookingContext, setBookingContext] = useState({
     nights: 1,
-    checkIn: '',
-    checkOut: '',
+    checkIn: "",
+    checkOut: "",
     guests: 1,
   });
 
@@ -31,7 +32,7 @@ export default function LandingPage() {
     nights: number,
     checkIn: string,
     checkOut: string,
-    guests: number
+    guests: number,
   ) {
     setSelectedRoom(room);
     setBookingContext({
@@ -52,7 +53,6 @@ export default function LandingPage() {
       <Hero onSearch={handleSearch} />
       <RoomsSection searchParams={searchParams} onBook={handleOpenCheckout} />
       <LeisureSection />
-      <SaasFeatures />
       <Footer />
 
       <CheckoutModal
