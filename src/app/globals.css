@@ -1,10 +1,10 @@
 /* Art direction: Pousada à beira-mar — luxo costeiro acessível
-   Palette: warm sand neutrals + deep ocean teal accent
-   Typography: Cormorant Garamond (display, elegância editorial) + Satoshi (body, clareza moderna)
-   Density: spacious — generous whitespace, editorial rhythm */
+  Palette: warm sand neutrals + deep ocean teal accent
+  Typography: IBM Plex Serif (display, credibilidade) + IBM Plex Sans (body, clareza profissional)
+  Density: spacious — generous whitespace, editorial rhythm */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -26,11 +26,11 @@
   --space-8: 2rem;    --space-10: 2.5rem; --space-12: 3rem;
   --space-16: 4rem;   --space-20: 5rem;   --space-24: 6rem;
 
-  /* Pousada Viva Mar — ocean palette */
-  --color-bg:             #f7f5f0;
-  --color-surface:        #faf9f6;
-  --color-surface-2:      #fdfcfa;
-  --color-surface-offset: #f0ede7;
+  /* Paleta principal solicitada */
+  --color-bg:             #f5f7fa;
+  --color-surface:        #ffffff;
+  --color-surface-2:      #f8fafc;
+  --color-surface-offset: #dde3e8;
   --color-border:         oklch(0.35 0.01 80 / 0.12);
   --color-divider:        oklch(0.35 0.01 80 / 0.08);
 
@@ -39,13 +39,16 @@
   --color-text-faint:     #b0aea8;
   --color-text-inverse:   #faf9f6;
 
-  --color-primary:        #0a7289;   /* ocean teal */
-  --color-primary-hover:  #085e72;
-  --color-primary-active: #064d5e;
-  --color-primary-light:  #d4f0f0;
+  --color-primary:        #193fdd;
+  --color-primary-hover:  #1534b9;
+  --color-primary-active: #112b98;
+  --color-primary-light:  #e8edff;
 
-  --color-accent:         #c6ae83;   /* warm sand gold */
-  --color-accent-hover:   #b69568;
+  --color-secondary:      #dde3e8;
+  --color-tertiary:       #ecc423;
+
+  --color-accent:         #ecc423;
+  --color-accent-hover:   #d9b11f;
 
   --color-success:        #2e7d32;
   --color-error:          #c62828;
@@ -69,8 +72,8 @@
   --radius-2xl: 1.5rem;
   --radius-full: 9999px;
 
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'Inter', sans-serif;
+  --font-display: 'IBM Plex Serif', Georgia, serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
 }
 
 /* === BASE RESET === */
@@ -99,7 +102,7 @@ h1, h2, h3, h4, h5, h6 { text-wrap: balance; line-height: 1.15; font-family: var
 p, li { text-wrap: pretty; }
 
 ::selection {
-  background: oklch(from #0a7289 l c h / 0.2);
+  background: oklch(from #193fdd l c h / 0.2);
   color: var(--color-text);
 }
 
@@ -201,7 +204,7 @@ p, li { text-wrap: pretty; }
   .input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px oklch(from #0a7289 l c h / 0.15);
+    box-shadow: 0 0 0 3px oklch(from #193fdd l c h / 0.15);
   }
   .input::placeholder { color: var(--color-text-faint); }
 
@@ -222,5 +225,5 @@ p, li { text-wrap: pretty; }
     letter-spacing: 0.05em;
   }
   .badge-teal { background: var(--color-primary-light); color: var(--color-primary); }
-  .badge-sand { background: #f0e8d4; color: #7a5c2a; }
+  .badge-sand { background: #fff4c8; color: #7a6200; }
 }
