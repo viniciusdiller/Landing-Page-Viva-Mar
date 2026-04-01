@@ -49,6 +49,11 @@ interface RoomCardProps {
 
 export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, onBook }: RoomCardProps) {
   const [imgIdx, setImgIdx] = useState(0);
+  const isPriceOnRequest = room.priceOnRequest === true;
+  const availableUnitsText =
+    typeof room.availableUnits === 'number'
+      ? `${room.availableUnits} ${room.availableUnits === 1 ? 'disponível' : 'disponíveis'}`
+      : null;
 
   return (
     <article
@@ -132,6 +137,12 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
           )}
         </div>
 
+        {availableUnitsText && (
+          <p className="mb-3 text-[var(--color-primary)]" style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>
+            {availableUnitsText}
+          </p>
+        )}
+
         {/* Description */}
         <p
           className="text-[var(--color-text-muted)] mb-4 flex-1"
@@ -140,47 +151,43 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
           {room.description}
         </p>
 
-        {/* Amenities (primeiras 4) */}
+        {/* Amenities */}
         <div className="flex flex-wrap gap-x-3 gap-y-1.5 mb-5">
-          {room.amenities.slice(0, 4).map((a) => (
+          {room.amenities.map((a) => (
             <AmenityIcon key={a.label} name={a.icon} label={a.label} />
           ))}
-          {room.amenities.length > 4 && (
-            <span className="text-[var(--color-text-faint)]" style={{ fontSize: 'var(--text-xs)' }}>
-              +{room.amenities.length - 4} mais
-            </span>
-          )}
         </div>
 
         {/* Price + CTA */}
-        <div
-          className="flex items-end justify-between pt-4"
-          style={{ borderTop: '1px solid var(--color-border)' }}
-        >
-          <div>
+        <div className="pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
             <div className="text-[var(--color-text-faint)]" style={{ fontSize: 'var(--text-xs)' }}>a partir de</div>
             <div
               className="text-[var(--color-primary)]"
               style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', fontWeight: 700, lineHeight: 1 }}
             >
-              {formatBRL(room.pricePerNight)}
+              {isPriceOnRequest ? 'A consultar' : formatBRL(room.pricePerNight)}
             </div>
-            <div className="text-[var(--color-text-faint)]" style={{ fontSize: 'var(--text-xs)' }}>/noite</div>
-            {nights > 1 && (
+            {!isPriceOnRequest && (
+              <div className="text-[var(--color-text-faint)]" style={{ fontSize: 'var(--text-xs)' }}>/noite</div>
+            )}
+            {!isPriceOnRequest && nights > 1 && (
               <div className="text-[var(--color-text-muted)] mt-0.5" style={{ fontSize: 'var(--text-xs)' }}>
                 {formatBRL(room.pricePerNight * nights)} total ({nights} noites)
               </div>
             )}
+            </div>
+            <button
+              onClick={() => onBook(room)}
+              className="btn btn-primary flex items-center justify-center gap-1.5 shrink-0 w-full sm:w-auto"
+              style={{ padding: '0.6rem 1.1rem', fontSize: 'var(--text-sm)' }}
+              aria-label={`Reservar ${room.name}`}
+            >
+              {isPriceOnRequest ? 'Consultar' : 'Reservar'}
+              <ArrowRight size={15} aria-hidden="true" />
+            </button>
           </div>
-          <button
-            onClick={() => onBook(room)}
-            className="btn btn-primary flex items-center gap-1.5"
-            style={{ padding: '0.6rem 1.1rem', fontSize: 'var(--text-sm)' }}
-            aria-label={`Reservar ${room.name}`}
-          >
-            Reservar
-            <ArrowRight size={15} aria-hidden="true" />
-          </button>
         </div>
       </div>
     </article>

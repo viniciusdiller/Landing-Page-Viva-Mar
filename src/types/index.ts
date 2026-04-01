@@ -20,9 +20,11 @@ export interface RoomType {
   description: string;
   maxOccupancy: number;
   pricePerNight: number;         // em BRL (centavos ÷ 100)
+  priceOnRequest?: boolean;      // quando o valor deve ser exibido como "A consultar"
   images: string[];              // URLs das fotos do quarto
   amenities: RoomAmenity[];
   available: boolean;
+  availableUnits?: number;       // quantidade de unidades disponíveis
   // Campos extras para UI
   size?: string;                 // ex: "28 m²"
   bedType?: string;              // ex: "Cama King"

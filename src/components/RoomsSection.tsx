@@ -49,13 +49,13 @@ export default function RoomsSection({ searchParams, onBook }: RoomsSectionProps
           <p className="text-[var(--color-text-muted)]" style={{ fontSize: 'var(--text-base)' }}>
             {searchParams?.checkIn && searchParams?.checkOut
               ? `Disponibilidade para ${new Date(searchParams.checkIn).toLocaleDateString('pt-BR')} — ${new Date(searchParams.checkOut).toLocaleDateString('pt-BR')}${searchParams.guests ? `, ${searchParams.guests} hóspede${searchParams.guests > 1 ? 's' : ''}` : ''}`
-              : '3 categorias de apartamentos com conforto, varanda e clima praiano em Saquarema.'}
+              : '5 tipos de apartamentos com conforto, varanda com rede e clima praiano em Saquarema.'}
           </p>
         </div>
 
         {/* Grid / Skeleton */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="rounded-xl overflow-hidden" style={{ background: 'var(--color-surface)' }}>
                 <div
@@ -85,7 +85,7 @@ export default function RoomsSection({ searchParams, onBook }: RoomsSectionProps
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
             {rooms.map((room) => (
               <RoomCard
                 key={room.id}
