@@ -1,15 +1,24 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Pousada Viva Mar — Praia da Vila em Saquarema',
+  title: "Pousada Viva Mar",
   description:
-    'Reserve sua estadia na Pousada Viva Mar em Saquarema/RJ com vista para o mar, café da manhã panorâmico e booking online.',
-  keywords: ['pousada saquarema', 'praia da vila', 'viva mar', 'reserva online', 'hotel saquarema rj'],
+    "Reserve sua estadia na Pousada Viva Mar em Saquarema/RJ com vista para o mar, café da manhã panorâmico e booking online.",
+  keywords: [
+    "pousada saquarema",
+    "praia da vila",
+    "viva mar",
+    "reserva online",
+    "hotel saquarema rj",
+  ],
+  icons: {
+    icon: "/favicon.ico",
+  },
   openGraph: {
-    title: 'Pousada Viva Mar',
-    description: 'Acorde com o oceano à sua frente. Reserve agora.',
-    type: 'website',
+    title: "Pousada Viva Mar",
+    description: "Acorde com o oceano à sua frente. Reserve agora.",
+    type: "website",
   },
 };
 
@@ -22,7 +31,11 @@ export default function RootLayout({
     <html lang="pt-BR">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="antialiased">{children}</body>
     </html>

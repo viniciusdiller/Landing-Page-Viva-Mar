@@ -21,9 +21,12 @@ export default function Header() {
             className="flex items-center gap-2 group"
             aria-label="Pousada Viva Mar"
           >
-            <div className="h-8 w-8 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] flex items-center justify-center text-sm font-bold">
-              VM
-            </div>
+            <img
+              src="/Logo-Viva-Mar.jpeg"
+              alt="Logo Pousada Viva Mar"
+              width={40}
+              height={40}
+            />
             <div>
               <p className="leading-none font-semibold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">
                 Pousada Viva Mar
