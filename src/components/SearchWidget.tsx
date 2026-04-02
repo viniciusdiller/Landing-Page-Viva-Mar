@@ -18,7 +18,10 @@ export default function SearchWidget({ onSearch }: SearchWidgetProps) {
   const [coupon, setCoupon] = useState("");
   const [showError, setShowError] = useState(false);
 
-  const hasDateError = useMemo(() => new Date(checkOut) <= new Date(checkIn), [checkIn, checkOut]);
+  const hasDateError = useMemo(
+    () => new Date(checkOut) <= new Date(checkIn),
+    [checkIn, checkOut],
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,43 +46,50 @@ export default function SearchWidget({ onSearch }: SearchWidgetProps) {
       className="rounded-none md:rounded-sm border border-white/50 bg-white shadow-[0_10px_32px_rgba(0,0,0,0.28)] overflow-hidden"
       aria-label="Buscar quartos disponíveis na Pousada Viva Mar"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-px bg-slate-200">
-        <div className="min-w-0 bg-white px-6 py-4 min-h-[90px] flex items-center justify-between gap-2 md:col-span-2 xl:col-span-3">
-          <div>
-            <p className="text-[11px] font-semibold text-slate-700">Destino ou Hotel</p>
-            <p className="mt-2 text-[clamp(1.05rem,1.45vw,1.65rem)] leading-tight font-semibold text-[var(--color-primary)]">Selecione</p>
-          </div>
-          <ChevronDown size={20} className="text-[var(--color-primary)]" aria-hidden="true" />
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-9 gap-px bg-slate-200">
         <div className="min-w-0 bg-white px-6 py-4 min-h-[90px] xl:col-span-2">
-          <label htmlFor="checkin" className="text-[11px] font-semibold text-slate-700">Check-in</label>
+          <label
+            htmlFor="checkin"
+            className="text-[11px] font-semibold text-slate-700"
+          >
+            Check-in
+          </label>
           <input
             id="checkin"
             type="date"
             min={today}
             value={checkIn}
             onChange={(e) => setCheckIn(e.target.value)}
-            className="mt-2 w-full min-w-0 pr-8 text-[clamp(0.95rem,1vw,1.1rem)] leading-tight font-semibold text-[var(--color-primary)] bg-transparent outline-none"
+            className="mt-2 w-full min-w-0 text-[clamp(0.95rem,1vw,1.1rem)] leading-tight font-semibold text-[var(--color-primary)] bg-transparent outline-none cursor-pointer"
             aria-invalid={hasDateError}
           />
         </div>
 
         <div className="min-w-0 bg-white px-6 py-4 min-h-[90px] xl:col-span-2">
-          <label htmlFor="checkout" className="text-[11px] font-semibold text-slate-700">Check-out</label>
+          <label
+            htmlFor="checkout"
+            className="text-[11px] font-semibold text-slate-700"
+          >
+            Check-out
+          </label>
           <input
             id="checkout"
             type="date"
             min={checkIn}
             value={checkOut}
             onChange={(e) => setCheckOut(e.target.value)}
-            className={`mt-2 w-full min-w-0 pr-8 text-[clamp(0.95rem,1vw,1.1rem)] leading-tight font-semibold bg-transparent outline-none ${hasDateError ? "text-[var(--color-error)]" : "text-[var(--color-primary)]"}`}
+            className={`mt-2 w-full min-w-0 text-[clamp(0.95rem,1vw,1.1rem)] leading-tight font-semibold bg-transparent outline-none cursor-pointer ${hasDateError ? "text-[var(--color-error)]" : "text-[var(--color-primary)]"}`}
             aria-invalid={hasDateError}
           />
         </div>
 
         <div className="min-w-0 bg-white px-6 py-4 min-h-[90px] xl:col-span-2">
-          <label htmlFor="guests" className="text-[11px] font-semibold text-slate-700">Hóspedes</label>
+          <label
+            htmlFor="guests"
+            className="text-[11px] font-semibold text-slate-700"
+          >
+            Hóspedes
+          </label>
           <div className="relative mt-2">
             <select
               id="guests"
@@ -88,7 +98,9 @@ export default function SearchWidget({ onSearch }: SearchWidgetProps) {
               className="w-full min-w-0 appearance-none pr-8 text-[clamp(0.95rem,1.05vw,1.1rem)] leading-tight font-semibold text-[var(--color-primary)] bg-transparent border-0 rounded-none outline-none cursor-pointer"
             >
               {[1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>{n} {n > 1 ? "adultos" : "adulto"}</option>
+                <option key={n} value={n}>
+                  {n} {n > 1 ? "adultos" : "adulto"}
+                </option>
               ))}
             </select>
             <ChevronDown
@@ -100,7 +112,12 @@ export default function SearchWidget({ onSearch }: SearchWidgetProps) {
         </div>
 
         <div className="min-w-0 bg-white px-6 py-4 min-h-[90px] md:col-span-2 xl:col-span-2">
-          <label htmlFor="coupon" className="text-[11px] font-semibold text-slate-700">Cupom</label>
+          <label
+            htmlFor="coupon"
+            className="text-[11px] font-semibold text-slate-700"
+          >
+            Cupom
+          </label>
           <input
             id="coupon"
             type="text"
