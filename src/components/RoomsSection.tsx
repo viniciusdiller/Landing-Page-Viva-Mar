@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import RoomCard from "./RoomCard";
+import { useEffect, useState } from "react";
 import { fetchRooms } from "@/lib/mock-rooms";
 import { calcNights } from "@/lib/booking";
 import type { RoomSearchParams, RoomType } from "@/types";
@@ -16,46 +15,6 @@ interface RoomsSectionProps {
     guests: number,
   ) => void;
 }
-
-interface GalleryImage {
-  src: string;
-  alt: string;
-}
-
-const FALLBACK_IMAGES: GalleryImage[] = [
-  {
-    src: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80",
-    alt: "Piscina com vista panoramica",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80",
-    alt: "Quarto premium com cama de casal",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80",
-    alt: "Suite com janela ampla",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1615529328331-f8917597711f?auto=format&fit=crop&w=1200&q=80",
-    alt: "Banheiro de suite com banheira",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1616594039964-3f6d7d9b4e46?auto=format&fit=crop&w=1200&q=80",
-    alt: "Quarto claro com decoracao minimalista",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1200&q=80",
-    alt: "Academia com equipamentos",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=1200&q=80",
-    alt: "Prato de gastronomia autoral",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1470218091926-22a08a325802?auto=format&fit=crop&w=1200&q=80",
-    alt: "Orla urbana proxima ao hotel",
-  },
-];
 
 export default function RoomsSection({
   searchParams,
@@ -80,28 +39,26 @@ export default function RoomsSection({
       .finally(() => setLoading(false));
   }, [searchParams?.checkIn, searchParams?.checkOut, searchParams?.guests]);
 
-  const galleryImages = useMemo(() => {
-    const fromRooms: GalleryImage[] = rooms
-      .flatMap((room) =>
-        room.images.map((src, idx) => ({
-          src,
-          alt: `${room.name} - foto ${idx + 1}`,
-        })),
-      )
-      .slice(0, 8);
-
-    if (fromRooms.length >= 8) return fromRooms;
-
-    return [...fromRooms, ...FALLBACK_IMAGES].slice(0, 8);
-  }, [rooms]);
+  // Função auxiliar para formatar moeda
+  const formatMoney = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
   return (
-    <section id="quartos" className="py-16 md:py-24 bg-[#ececec]" aria-labelledby="quartos-heading">
+    <section
+      id="quartos"
+      className="py-16 md:py-24 bg-[#ececec]"
+      aria-labelledby="quartos-heading"
+    >
       <div className="container-wide">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-[90rem] mx-auto px-4 md:px-8">
+          {/* Cabeçalho Minimalista */}
           <h2
             id="quartos-heading"
-            className="text-center text-[#2f3134] uppercase mb-12 md:mb-16"
+            className="text-center text-[#2f3134] uppercase mb-8 md:mb-12"
             style={{
               fontSize: "clamp(1.25rem, 2vw, 2.1rem)",
               letterSpacing: "0.36em",
@@ -109,22 +66,28 @@ export default function RoomsSection({
               fontFamily: "var(--font-body)",
             }}
           >
-            CONHECA BEM DE PERTO
+            CONHEÇA BEM DE PERTO
           </h2>
 
+          {/* Informação de Datas de Busca */}
           {searchParams?.checkIn && searchParams?.checkOut && (
             <p
-              className="text-center mb-8 text-[var(--color-text-muted)]"
+              className="text-center mb-10 text-[var(--color-text-muted)] tracking-wide"
               style={{ fontSize: "var(--text-sm)" }}
             >
-              Disponibilidade consultada para {new Date(searchParams.checkIn).toLocaleDateString("pt-BR")} ate {" "}
+              Disponibilidade consultada para{" "}
+              {new Date(searchParams.checkIn).toLocaleDateString("pt-BR")} até{" "}
               {new Date(searchParams.checkOut).toLocaleDateString("pt-BR")}
-              {searchParams.guests ? `, ${searchParams.guests} hospede${searchParams.guests > 1 ? "s" : ""}` : ""}
+              {searchParams.guests
+                ? `, ${searchParams.guests} hóspede${searchParams.guests > 1 ? "s" : ""}`
+                : ""}
             </p>
           )}
 
+          {/* Grade de Quartos Funcional */}
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+            // Skeleton de Carregamento
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={`skeleton-${i}`}
@@ -132,136 +95,106 @@ export default function RoomsSection({
                 />
               ))}
             </div>
+          ) : rooms.length === 0 ? (
+            // Estado Vazio (Sem Quartos)
+            <div className="text-center py-20 bg-white/50 border border-white/80">
+              <p
+                className="text-[var(--color-text-muted)] mb-2"
+                style={{ fontSize: "var(--text-base)" }}
+              >
+                Nenhum quarto disponível para os critérios selecionados.
+              </p>
+              <p
+                className="text-[var(--color-text-faint)]"
+                style={{ fontSize: "var(--text-sm)" }}
+              >
+                Tente alterar as datas ou o número de hóspedes.
+              </p>
+            </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-              {galleryImages.map((image, index) => (
+            // Cards Interativos
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3">
+              {rooms.map((room) => (
                 <figure
-                  key={`${image.src}-${index}`}
-                  className="group relative overflow-hidden bg-white"
+                  key={room.id}
+                  className="group relative overflow-hidden bg-slate-900 cursor-pointer"
+                  onClick={() =>
+                    onBook(
+                      room,
+                      nights || 1,
+                      searchParams?.checkIn ?? "",
+                      searchParams?.checkOut ?? "",
+                      searchParams?.guests ?? 1,
+                    )
+                  }
                 >
+                  {/* Imagem de Fundo */}
                   <img
-                    src={image.src}
-                    alt={image.alt}
+                    src={room.images[0]}
+                    alt={room.name}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full aspect-[4/3] object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full aspect-[4/3] object-cover transition-all duration-700 group-hover:scale-105 group-hover:opacity-60"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = `https://picsum.photos/seed/acomodacao-${index}/900/675`;
+                      (e.currentTarget as HTMLImageElement).src =
+                        `https://picsum.photos/seed/${room.id}/900/675`;
                     }}
                   />
+
+                  {/* Gradiente sutil permanente na base para o texto ficar sempre legível */}
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-80" />
+
+                  {/* Gradiente extra que escurece a imagem toda no hover */}
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                  {/* Conteúdo do Card */}
+                  <div className="absolute inset-0 p-5 md:p-6 flex flex-col justify-end">
+                    {/* Essa div principal empurra os itens 48 pixels pra baixo. No hover, ela sobe para a posição 0. */}
+                    <div className="translate-y-[48px] group-hover:translate-y-0 transition-transform duration-500 ease-out flex flex-col">
+                      {/* Nome e Preço (SEMPRE VISÍVEIS) */}
+                      <h3
+                        className="text-white text-lg md:text-xl font-semibold mb-1 drop-shadow-md"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
+                        {room.name}
+                      </h3>
+                      <p className="text-white/90 text-sm drop-shadow-md mb-4 font-medium">
+                        {formatMoney(room.pricePerNight)}{" "}
+                        <span className="text-white/60 text-xs font-normal">
+                          / noite
+                        </span>
+                      </p>
+
+                      {/* Elementos que aparecem apenas no hover (Botão e Capacidade) */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-between">
+                        <span className="text-white/80 text-xs tracking-widest uppercase">
+                          {room.capacity} hóspedes
+                        </span>
+
+                        <button
+                          className="px-5 py-2.5 bg-white text-black font-semibold text-[10px] sm:text-xs tracking-[0.2em] uppercase transition-colors hover:bg-[var(--color-primary)] hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onBook(
+                              room,
+                              nights || 1,
+                              searchParams?.checkIn ?? "",
+                              searchParams?.checkOut ?? "",
+                              searchParams?.guests ?? 1,
+                            );
+                          }}
+                        >
+                          Reservar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </figure>
               ))}
             </div>
           )}
-
-          <div className="mt-12 md:mt-16">
-            <h3
-              className="text-[var(--color-text)] mb-4"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "var(--text-xl)",
-                fontWeight: 600,
-              }}
-            >
-              Quartos e valores
-            </h3>
-
-            <p
-              className="text-[var(--color-text-muted)] mb-6"
-              style={{ fontSize: "var(--text-sm)" }}
-            >
-              Valores e disponibilidade com base no mock atual de quartos.
-            </p>
-
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={`card-skeleton-${i}`}
-                    className="rounded-xl overflow-hidden"
-                    style={{ background: "var(--color-surface)" }}
-                  >
-                    <div
-                      className="animate-pulse"
-                      style={{
-                        aspectRatio: "4/3",
-                        background:
-                          "linear-gradient(90deg, var(--color-surface-offset) 25%, var(--color-surface-dynamic, #e6e4df) 50%, var(--color-surface-offset) 75%)",
-                        backgroundSize: "200% 100%",
-                        animation: "shimmer 1.5s ease-in-out infinite",
-                      }}
-                    />
-                    <div className="p-5 space-y-3">
-                      <div
-                        className="h-5 rounded"
-                        style={{
-                          background: "var(--color-surface-offset)",
-                          width: "70%",
-                        }}
-                      />
-                      <div
-                        className="h-4 rounded"
-                        style={{
-                          background: "var(--color-surface-offset)",
-                          width: "100%",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : rooms.length === 0 ? (
-              <div className="text-center py-12">
-                <p
-                  className="text-[var(--color-text-muted)] mb-2"
-                  style={{ fontSize: "var(--text-base)" }}
-                >
-                  Nenhum quarto disponível para os critérios selecionados.
-                </p>
-                <p
-                  className="text-[var(--color-text-faint)]"
-                  style={{ fontSize: "var(--text-sm)" }}
-                >
-                  Tente alterar as datas ou o número de hóspedes.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.map((room) => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    checkIn={searchParams?.checkIn}
-                    checkOut={searchParams?.checkOut}
-                    guests={searchParams?.guests}
-                    nights={nights || 1}
-                    onBook={(r) =>
-                      onBook(
-                        r,
-                        nights || 1,
-                        searchParams?.checkIn ?? "",
-                        searchParams?.checkOut ?? "",
-                        searchParams?.guests ?? 1,
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes shimmer {
-          0% {
-            background-position: -200% 0;
-          }
-          100% {
-            background-position: 200% 0;
-          }
-        }
-      `}</style>
     </section>
   );
 }

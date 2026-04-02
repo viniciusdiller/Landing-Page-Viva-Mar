@@ -8,27 +8,28 @@
 
 // --- QUARTO (mapeado para Channex RoomType) ---
 export interface RoomAmenity {
-  icon: string;        // nome do ícone Lucide
+  icon: string; // nome do ícone Lucide
   label: string;
 }
 
 export interface RoomType {
   // ID usado na API Channex: property_id + room_type_id
-  id: string;                    // channex room_type_id
-  propertyId: string;            // channex property_id
+  id: string; // channex room_type_id
+  propertyId: string; // channex property_id
   name: string;
   description: string;
   maxOccupancy: number;
-  pricePerNight: number;         // em BRL (centavos ÷ 100)
-  priceOnRequest?: boolean;      // quando o valor deve ser exibido como "A consultar"
-  images: string[];              // URLs das fotos do quarto
+  pricePerNight: number; // em BRL (centavos ÷ 100)
+  priceOnRequest?: boolean; // quando o valor deve ser exibido como "A consultar"
+  images: string[]; // URLs das fotos do quarto
   amenities: RoomAmenity[];
   available: boolean;
-  availableUnits?: number;       // quantidade de unidades disponíveis
+  availableUnits?: number; // quantidade de unidades disponíveis
+  capacity: number; // número de hóspedes que o quarto acomoda
   // Campos extras para UI
-  size?: string;                 // ex: "28 m²"
-  bedType?: string;              // ex: "Cama King"
-  view?: string;                 // ex: "Vista Mar"
+  size?: string; // ex: "28 m²"
+  bedType?: string; // ex: "Cama King"
+  view?: string; // ex: "Vista Mar"
 }
 
 // --- HÓSPEDE ---
@@ -45,26 +46,26 @@ export interface GuestData {
 export interface BookingFormData {
   roomId: string;
   propertyId: string;
-  checkIn: string;               // ISO date string YYYY-MM-DD
-  checkOut: string;              // ISO date string YYYY-MM-DD
+  checkIn: string; // ISO date string YYYY-MM-DD
+  checkOut: string; // ISO date string YYYY-MM-DD
   guests: number;
   nights: number;
   pricePerNight: number;
   subtotal: number;
   discountCode?: string;
-  discountAmount: number;        // valor em BRL deduzido
+  discountAmount: number; // valor em BRL deduzido
   total: number;
   guest: GuestData;
 }
 
 // --- STATUS DO PAGAMENTO ---
 export type PaymentStatus =
-  | 'pending'
-  | 'approved'
-  | 'in_process'
-  | 'rejected'
-  | 'cancelled'
-  | 'refunded';
+  | "pending"
+  | "approved"
+  | "in_process"
+  | "rejected"
+  | "cancelled"
+  | "refunded";
 
 // --- PAYLOAD ENVIADO PARA A API INTERNA ANTES/APÓS MERCADO PAGO ---
 // Enviado para POST /api/bookings/create
@@ -87,25 +88,25 @@ export interface CreateBookingPayload {
   subtotal: number;
   discountCode: string | null;
   discountAmount: number;
-  total: number;                 // valor final cobrado em BRL
+  total: number; // valor final cobrado em BRL
 
   // Pagamento
   paymentStatus: PaymentStatus;
   // O externalPaymentId é preenchido após confirmação do Mercado Pago
-  externalPaymentId?: string;    // preference_id ou payment_id do MP
-  paymentMethod?: 'pix' | 'credit_card' | 'debit_card';
+  externalPaymentId?: string; // preference_id ou payment_id do MP
+  paymentMethod?: "pix" | "credit_card" | "debit_card";
 
   // Metadados
-  source: 'landing_page' | 'admin' | 'channel_manager';
-  createdAt: string;             // ISO timestamp
+  source: "landing_page" | "admin" | "channel_manager";
+  createdAt: string; // ISO timestamp
 }
 
 // --- RESPOSTA DA API INTERNA ---
 export interface BookingResponse {
   success: boolean;
-  bookingId: string;             // ID interno do SaaS
-  channexBookingId?: string;     // ID no Channex (após sync)
-  status: 'confirmed' | 'pending_payment' | 'failed';
+  bookingId: string; // ID interno do SaaS
+  channexBookingId?: string; // ID no Channex (após sync)
+  status: "confirmed" | "pending_payment" | "failed";
   message: string;
 }
 
@@ -114,21 +115,26 @@ export interface BookingResponse {
 export interface MercadoPagoWebhookPayload {
   id: number;
   live_mode: boolean;
-  type: 'payment' | 'plan' | 'subscription' | 'invoice' | 'point_integration_wh';
+  type:
+    | "payment"
+    | "plan"
+    | "subscription"
+    | "invoice"
+    | "point_integration_wh";
   date_created: string;
   user_id: number;
   api_version: string;
-  action: 'payment.created' | 'payment.updated';
+  action: "payment.created" | "payment.updated";
   data: {
-    id: string;                  // payment_id do Mercado Pago
+    id: string; // payment_id do Mercado Pago
   };
 }
 
 // --- COUPON / DESCONTO ---
 export interface DiscountCoupon {
   code: string;
-  type: 'percentage' | 'fixed';
-  value: number;                 // % ou BRL
+  type: "percentage" | "fixed";
+  value: number; // % ou BRL
   minNights?: number;
   validUntil?: string;
   description: string;
