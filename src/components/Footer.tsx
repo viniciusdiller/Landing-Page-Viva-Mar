@@ -105,11 +105,18 @@ export default function Footer() {
         </div>
 
         <div
-          className="pt-5 border-t border-[var(--color-border)] text-[var(--color-text-faint)]"
+          className="pt-5 border-t border-[var(--color-border)] text-[var(--color-text-faint)] flex items-center justify-between gap-4"
           style={{ fontSize: "var(--text-xs)" }}
         >
-          © {new Date().getFullYear()} Pousada Viva Mar. Powered by
-          contato@totalsoftware.com
+          <span>
+            © {new Date().getFullYear()} Pousada Viva Mar. Powered by
+            contato@totalsoftware.com
+          </span>
+          <img
+            src="/Logo Completa TotalSoftware.png"
+            alt="TotalSoftware"
+            className="w-[10%] min-w-[80px]"
+          />
         </div>
       </div>
     </footer>
