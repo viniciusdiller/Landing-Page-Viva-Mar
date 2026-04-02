@@ -28,6 +28,14 @@ const DEFAULT_GUEST: GuestData = {
   specialRequests: "",
 };
 
+function formatDateBR(dateString: string) {
+  if (!dateString) return "";
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return dateString;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+}
+
 export default function CheckoutModal({
   open,
   room,
@@ -171,9 +179,14 @@ export default function CheckoutModal({
                 className="text-[var(--color-text-muted)] mb-4"
                 style={{ fontSize: "var(--text-sm)" }}
               >
-                {bookingContext.checkIn || "Selecione"} →{" "}
-                {bookingContext.checkOut || "Selecione"} •{" "}
-                {bookingContext.guests} hóspede(s)
+                {bookingContext.checkIn
+                  ? formatDateBR(bookingContext.checkIn)
+                  : "Selecione"}{" "}
+                →{" "}
+                {bookingContext.checkOut
+                  ? formatDateBR(bookingContext.checkOut)
+                  : "Selecione"}{" "}
+                • {bookingContext.guests} hóspede(s)
               </p>
 
               <div className="space-y-2" style={{ fontSize: "var(--text-sm)" }}>
