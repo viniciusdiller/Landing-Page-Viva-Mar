@@ -8,6 +8,7 @@ import LeisureSection from "@/components/LeisureSection";
 import Footer from "@/components/Footer";
 import CheckoutModal from "@/components/CheckoutModal";
 import type { RoomSearchParams, RoomType } from "@/types";
+import Map from "@/components/Map";
 
 export default function LandingPage() {
   const [searchParams, setSearchParams] = useState<
@@ -53,6 +54,7 @@ export default function LandingPage() {
       <Hero onSearch={handleSearch} />
       <RoomsSection searchParams={searchParams} onBook={handleOpenCheckout} />
       <LeisureSection />
+      <Map />
       <Footer />
 
       <CheckoutModal

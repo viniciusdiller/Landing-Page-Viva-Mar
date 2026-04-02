@@ -9,9 +9,8 @@ export default function Header() {
   const navLinks = [
     { label: "Inicio", href: "#hero" },
     { label: "Hospedagem", href: "#quartos" },
-    { label: "Gastronomia", href: "#lazer" },
+    { label: "Lazer", href: "#lazer" },
     { label: "Contato", href: "#footer" },
-    { label: "Blog", href: "#" },
   ];
 
   return (
