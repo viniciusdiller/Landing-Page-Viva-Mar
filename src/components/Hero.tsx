@@ -35,21 +35,21 @@ export default function Hero({ onSearch }: HeroProps) {
               letterSpacing: "0.01em",
             }}
           >
-            ALMOCO DE PASCOA NO SKYLAB
+            VIVA MAR
           </h1>
           <p
             className="mt-5 text-white/90 max-w-3xl mx-auto"
             style={{ fontSize: "var(--text-base)" }}
           >
-            Buffet completo com peixes, carnes, massas e a vista deslumbrante da
-            orla.
+            Conheça nossos quartos e reserve sua estadia na Pousada Viva Mar, o
+            refúgio perfeito para relaxar e aproveitar o melhor de Saquarema.
           </p>
 
           <a
             href="#quartos"
             className="mt-7 inline-flex h-12 px-8 items-center justify-center text-white font-semibold bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition-colors"
           >
-            FACA SUA RESERVA
+            FAÇA SUA RESERVA
           </a>
         </div>
 

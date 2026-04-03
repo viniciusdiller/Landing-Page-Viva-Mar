@@ -28,6 +28,7 @@ const DEFAULT_GUEST: GuestData = {
   specialRequests: "",
 };
 
+// Função para converter YYYY-MM-DD em DD/MM/YYYY
 function formatDateBR(dateString: string) {
   if (!dateString) return "";
   const parts = dateString.split("-");
@@ -53,9 +54,7 @@ export default function CheckoutModal({
   const [resultMessage, setResultMessage] = useState("");
 
   useEffect(() => {
-    if (open) {
-      setResultMessage("");
-    }
+    if (open) setResultMessage("");
   }, [open]);
 
   const subtotal = useMemo(() => {
@@ -102,7 +101,6 @@ export default function CheckoutModal({
 
   async function handleSubmitReservation(e: React.FormEvent) {
     e.preventDefault();
-
     if (!room) return;
 
     const formData: BookingFormData = {
@@ -133,145 +131,163 @@ export default function CheckoutModal({
     }
   }
 
+  // Estilo minimalista para os inputs do formulário
+  const inputClassName =
+    "w-full border-0 border-b border-gray-300 py-2.5 px-0 focus:ring-0 focus:border-black bg-transparent text-[15px] transition-colors outline-none placeholder:text-gray-400";
+
   return (
-    <div className="fixed inset-0 z-[60]">
-      <button
-        className="absolute inset-0 bg-black/55"
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 md:p-8">
+      {/* Overlay Escuro */}
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-label="Fechar checkout"
       />
 
-      <div className="absolute inset-0 overflow-y-auto p-4 md:p-8">
-        <div className="mx-auto w-full max-w-5xl rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl">
-          <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)]">
-            <h3
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "var(--text-xl)",
-                fontWeight: 600,
-              }}
+      {/* Container do Modal */}
+      <div className="relative w-full max-w-5xl bg-white shadow-2xl flex flex-col max-h-[95vh] md:max-h-[85vh] overflow-hidden">
+        {/* Header do Modal */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <h3
+            className="text-[#2f3134] uppercase text-xs md:text-sm"
+            style={{
+              letterSpacing: "0.25em",
+              fontWeight: 600,
+              fontFamily: "var(--font-body)",
+            }}
+          >
+            Finalizar Reserva
+          </h3>
+          <button
+            className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 transition-colors"
+            onClick={onClose}
+            aria-label="Fechar"
+          >
+            <X size={20} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        {/* Corpo do Modal - Grid 2 colunas */}
+        <div className="flex flex-col lg:flex-row overflow-y-auto">
+          {/* Lado Esquerdo - Resumo do Quarto */}
+          <aside className="lg:w-2/5 bg-[#ececec] p-6 lg:p-8 flex flex-col border-r border-gray-200">
+            <img
+              src={room.images[0]}
+              alt={room.name}
+              className="w-full aspect-[4/3] object-cover mb-6 shadow-sm grayscale-[10%]"
+            />
+
+            <h4
+              style={{ fontFamily: "var(--font-display)" }}
+              className="text-2xl font-semibold mb-2 text-gray-900"
             >
-              Finalizar reserva
-            </h3>
-            <button
-              className="p-2 rounded-md hover:bg-[var(--color-surface-offset)]"
-              onClick={onClose}
-              aria-label="Fechar"
-            >
-              <X size={18} />
-            </button>
-          </div>
+              {room.name}
+            </h4>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-            <aside className="p-5 md:p-6 border-b lg:border-b-0 lg:border-r border-[var(--color-border)] bg-[var(--color-surface-2)]">
-              <img
-                src={room.images[0]}
-                alt={room.name}
-                className="w-full h-44 object-cover rounded-xl mb-4"
-              />
-              <h4
-                style={{ fontSize: "var(--text-lg)", fontWeight: 700 }}
-                className="mb-1"
-              >
-                {room.name}
-              </h4>
-              <p
-                className="text-[var(--color-text-muted)] mb-4"
-                style={{ fontSize: "var(--text-sm)" }}
-              >
-                {bookingContext.checkIn
-                  ? formatDateBR(bookingContext.checkIn)
-                  : "Selecione"}{" "}
-                →{" "}
-                {bookingContext.checkOut
-                  ? formatDateBR(bookingContext.checkOut)
-                  : "Selecione"}{" "}
-                • {bookingContext.guests} hóspede(s)
-              </p>
-
-              <div className="space-y-2" style={{ fontSize: "var(--text-sm)" }}>
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <strong>{formatBRL(subtotal)}</strong>
-                </div>
-                <div className="flex justify-between text-[var(--color-success)]">
-                  <span>Desconto</span>
-                  <strong>- {formatBRL(discountAmount)}</strong>
-                </div>
-                <div
-                  className="pt-2 border-t border-[var(--color-border)] flex justify-between"
-                  style={{ fontSize: "var(--text-base)" }}
-                >
-                  <span>Total</span>
-                  <strong>{formatBRL(total)}</strong>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-xl border border-[var(--color-border)] p-3">
-                <label
-                  className="block mb-2"
-                  style={{ fontSize: "var(--text-xs)", fontWeight: 700 }}
-                >
-                  <TicketPercent size={14} className="inline mr-1" /> Cupão de
-                  desconto
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    className="input"
-                    placeholder="Ex: VIVAMAR10"
-                    value={couponInput}
-                    onChange={(e) =>
-                      setCouponInput(e.target.value.toUpperCase())
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={applyCoupon}
+            {/* Comodidades (Amenities) adicionadas aqui */}
+            {room.amenities && room.amenities.length > 0 && (
+              <div className="flex flex-wrap gap-x-2 gap-y-1 mb-5">
+                {room.amenities.map((amenity, index) => (
+                  <span
+                    key={index}
+                    className="text-[10px] uppercase tracking-widest text-gray-500"
                   >
-                    Aplicar
-                  </button>
-                </div>
-                {couponMessage && (
-                  <p
-                    className="mt-2"
-                    style={{
-                      fontSize: "var(--text-xs)",
-                      color: appliedCoupon
-                        ? "var(--color-success)"
-                        : "var(--color-error)",
-                    }}
-                  >
-                    {couponMessage}
-                  </p>
-                )}
+                    {amenity.label}{" "}
+                    {index < room.amenities!.length - 1 && (
+                      <span className="ml-2 text-gray-400">•</span>
+                    )}
+                  </span>
+                ))}
               </div>
-            </aside>
+            )}
 
-            <form
-              onSubmit={handleSubmitReservation}
-              className="p-5 md:p-6 space-y-4"
-            >
-              <h4 style={{ fontSize: "var(--text-base)", fontWeight: 700 }}>
-                Dados do hóspede
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <p className="text-gray-500 text-xs tracking-wider uppercase mb-8 leading-relaxed">
+              {bookingContext.checkIn
+                ? formatDateBR(bookingContext.checkIn)
+                : "Selecione"}{" "}
+              →{" "}
+              {bookingContext.checkOut
+                ? formatDateBR(bookingContext.checkOut)
+                : "Selecione"}{" "}
+              <br />
+              {bookingContext.guests} hóspede(s)
+            </p>
+
+            <div className="space-y-3 pt-6 border-t border-gray-300/60 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <strong>{formatBRL(subtotal)}</strong>
+              </div>
+              <div className="flex justify-between text-[var(--color-success)]">
+                <span>Desconto</span>
+                <strong>- {formatBRL(discountAmount)}</strong>
+              </div>
+              <div className="pt-4 mt-2 border-t border-gray-300/60 flex justify-between text-base text-black">
+                <span className="uppercase tracking-widest text-xs font-semibold self-center">
+                  Total
+                </span>
+                <strong className="text-lg">{formatBRL(total)}</strong>
+              </div>
+            </div>
+
+            {/* Cupom */}
+            <div className="mt-8 pt-6 border-t border-gray-300/60">
+              <label className="block mb-3 text-xs tracking-widest uppercase font-semibold text-gray-600">
+                <TicketPercent size={14} className="inline mr-2 -mt-0.5" />
+                Cupom
+              </label>
+              <div className="flex gap-3">
                 <input
-                  className="input"
+                  className="flex-1 bg-white border border-gray-200 px-3 py-2 text-sm outline-none focus:border-black transition-colors"
+                  placeholder="EX: VIVAMAR10"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                />
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-gray-200 text-gray-800 text-xs uppercase tracking-widest font-semibold hover:bg-gray-300 transition-colors"
+                  onClick={applyCoupon}
+                >
+                  Aplicar
+                </button>
+              </div>
+              {couponMessage && (
+                <p
+                  className={`mt-2 text-xs ${appliedCoupon ? "text-[var(--color-success)]" : "text-red-500"}`}
+                >
+                  {couponMessage}
+                </p>
+              )}
+            </div>
+          </aside>
+
+          {/* Lado Direito - Formulário */}
+          <form
+            onSubmit={handleSubmitReservation}
+            className="lg:w-3/5 p-6 lg:p-8 flex flex-col justify-between bg-white"
+          >
+            <div>
+              <h4 className="text-xs uppercase tracking-[0.2em] font-semibold text-gray-800 mb-6">
+                Dados do Hóspede
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
+                <input
+                  className={inputClassName}
                   placeholder="Nome"
                   value={guest.firstName}
                   onChange={(e) => updateGuest("firstName", e.target.value)}
                   required
                 />
                 <input
-                  className="input"
+                  className={inputClassName}
                   placeholder="Sobrenome"
                   value={guest.lastName}
                   onChange={(e) => updateGuest("lastName", e.target.value)}
                   required
                 />
                 <input
-                  className="input"
+                  className={inputClassName}
                   type="email"
                   placeholder="E-mail"
                   value={guest.email}
@@ -279,20 +295,20 @@ export default function CheckoutModal({
                   required
                 />
                 <input
-                  className="input"
+                  className={inputClassName}
                   placeholder="Telefone"
                   value={guest.phone}
                   onChange={(e) => updateGuest("phone", e.target.value)}
                   required
                 />
                 <input
-                  className="input sm:col-span-2"
+                  className={`${inputClassName} sm:col-span-2`}
                   placeholder="CPF (opcional)"
                   value={guest.cpf}
                   onChange={(e) => updateGuest("cpf", e.target.value)}
                 />
                 <textarea
-                  className="input sm:col-span-2 min-h-[90px]"
+                  className={`${inputClassName} sm:col-span-2 min-h-[80px] resize-none`}
                   placeholder="Pedidos especiais (opcional)"
                   value={guest.specialRequests}
                   onChange={(e) =>
@@ -300,30 +316,29 @@ export default function CheckoutModal({
                   }
                 />
               </div>
+            </div>
 
+            <div className="mt-10 space-y-4">
               <button
                 type="submit"
-                className="btn btn-primary w-full"
+                className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] text-xs font-semibold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2"
                 disabled={submitting}
               >
                 {submitting ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : null}
-                Reservar Quarto
+                {submitting ? "Processando..." : "Confirmar Reserva"}
               </button>
 
               <MercadoPagoCheckout />
 
               {resultMessage && (
-                <p
-                  className="rounded-lg p-3 bg-[var(--color-primary-light)] text-[var(--color-primary)]"
-                  style={{ fontSize: "var(--text-sm)" }}
-                >
+                <p className="text-center text-sm p-3 bg-gray-50 border border-gray-100 text-gray-800">
                   {resultMessage}
                 </p>
               )}
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
