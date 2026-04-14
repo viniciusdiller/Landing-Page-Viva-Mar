@@ -80,7 +80,8 @@ export default function Footer() {
             </h4>
             <div className="flex gap-3 text-[var(--color-text-muted)]">
               <a
-                href="#"
+                target="_blank"
+                href="https://www.instagram.com/pousadavivamar/?hl=en"
                 aria-label="Instagram"
                 className="p-2 rounded-md hover:bg-[var(--color-surface-offset)] hover:text-[var(--color-text)]"
               >

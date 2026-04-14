@@ -1,35 +1,54 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Users, BedDouble, Maximize, ArrowRight, Wifi, Wind, Tv, Coffee, Waves, Trees, ParkingCircle, Bath, Utensils, Fan, Snowflake, Refrigerator, Sun, type LucideIcon } from 'lucide-react';
-import type { RoomType } from '@/types';
-import { formatBRL } from '@/lib/booking';
+import { useState } from "react";
+import {
+  Users,
+  BedDouble,
+  Maximize,
+  ArrowRight,
+  Wifi,
+  Wind,
+  Tv,
+  Coffee,
+  Waves,
+  Trees,
+  ParkingCircle,
+  Bath,
+  Utensils,
+  Fan,
+  Snowflake,
+  Refrigerator,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
+import type { RoomType } from "@/types";
+import { formatBRL } from "@/lib/booking";
 
 // Mapeamento de nome de ícone (string) para componente Lucide
 const ICON_MAP: Record<string, LucideIcon> = {
   wifi: Wifi,
-  'air-vent': Wind,
+  "air-vent": Wind,
   tv: Tv,
   coffee: Coffee,
   waves: Waves,
   bath: Bath,
   trees: Trees,
-  'parking-circle': ParkingCircle,
+  "parking-circle": ParkingCircle,
   utensils: Utensils,
   fan: Fan,
   refrigerator: Refrigerator,
   hammock: Sun,
-  'bed-double': BedDouble,
+  "bed-double": BedDouble,
   snowflake: Snowflake,
 };
 
 function AmenityIcon({ name, label }: { name: string; label: string }) {
   const Icon = ICON_MAP[name];
-  if (!Icon) return <span style={{ fontSize: 'var(--text-xs)' }}>{label}</span>;
+  if (!Icon) return <span style={{ fontSize: "var(--text-xs)" }}>{label}</span>;
   return (
     <span
       className="flex items-center gap-1 text-[var(--color-text-muted)]"
-      style={{ fontSize: 'var(--text-xs)' }}
+      style={{ fontSize: "var(--text-xs)" }}
       title={label}
     >
       <Icon size={13} aria-hidden="true" />
@@ -47,12 +66,19 @@ interface RoomCardProps {
   onBook: (room: RoomType) => void;
 }
 
-export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, onBook }: RoomCardProps) {
+export default function RoomCard({
+  room,
+  checkIn,
+  checkOut,
+  guests,
+  nights = 1,
+  onBook,
+}: RoomCardProps) {
   const [imgIdx, setImgIdx] = useState(0);
   const isPriceOnRequest = room.priceOnRequest === true;
   const availableUnitsText =
-    typeof room.availableUnits === 'number'
-      ? `${room.availableUnits} ${room.availableUnits === 1 ? 'disponível' : 'disponíveis'}`
+    typeof room.availableUnits === "number"
+      ? `${room.availableUnits} ${room.availableUnits === 1 ? "disponível" : "disponíveis"}`
       : null;
 
   return (
@@ -61,10 +87,7 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
       aria-label={`Quarto: ${room.name}`}
     >
       {/* Imagem */}
-      <div
-        className="relative overflow-hidden"
-        style={{ aspectRatio: '4/3' }}
-      >
+      <div className="relative overflow-hidden" style={{ aspectRatio: "4/3" }}>
         <img
           src={room.images[imgIdx] ?? room.images[0]}
           alt={`${room.name} — Pousada Viva Mar`}
@@ -74,7 +97,8 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
           loading="lazy"
           decoding="async"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/fallback-${room.id}/800/500`;
+            (e.target as HTMLImageElement).src =
+              `https://picsum.photos/seed/fallback-${room.id}/800/500`;
           }}
         />
         {/* Thumbnail dots */}
@@ -88,8 +112,8 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
                 aria-label={`Ver foto ${i + 1}`}
                 className="w-1.5 h-1.5 rounded-full transition-all"
                 style={{
-                  background: i === imgIdx ? 'white' : 'oklch(1 0 0 / 0.5)',
-                  transform: i === imgIdx ? 'scale(1.3)' : 'scale(1)',
+                  background: i === imgIdx ? "white" : "oklch(1 0 0 / 0.5)",
+                  transform: i === imgIdx ? "scale(1.3)" : "scale(1)",
                 }}
               />
             ))}
@@ -99,7 +123,7 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
         {room.view && (
           <div
             className="absolute top-3 left-3 badge badge-teal"
-            style={{ backdropFilter: 'blur(6px)' }}
+            style={{ backdropFilter: "blur(6px)" }}
           >
             <Waves size={11} aria-hidden="true" />
             {room.view}
@@ -112,25 +136,38 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
         {/* Title */}
         <h3
           className="mb-1 text-[var(--color-text)]"
-          style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 600 }}
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "var(--text-lg)",
+            fontWeight: 600,
+          }}
         >
           {room.name}
         </h3>
 
         {/* Meta info */}
         <div className="flex flex-wrap gap-3 mb-3">
-          <span className="flex items-center gap-1 text-[var(--color-text-muted)]" style={{ fontSize: 'var(--text-xs)' }}>
+          <span
+            className="flex items-center gap-1 text-[var(--color-text-muted)]"
+            style={{ fontSize: "var(--text-xs)" }}
+          >
             <Users size={13} aria-hidden="true" />
             Até {room.maxOccupancy} hóspedes
           </span>
           {room.bedType && (
-            <span className="flex items-center gap-1 text-[var(--color-text-muted)]" style={{ fontSize: 'var(--text-xs)' }}>
+            <span
+              className="flex items-center gap-1 text-[var(--color-text-muted)]"
+              style={{ fontSize: "var(--text-xs)" }}
+            >
               <BedDouble size={13} aria-hidden="true" />
               {room.bedType}
             </span>
           )}
           {room.size && (
-            <span className="flex items-center gap-1 text-[var(--color-text-muted)]" style={{ fontSize: 'var(--text-xs)' }}>
+            <span
+              className="flex items-center gap-1 text-[var(--color-text-muted)]"
+              style={{ fontSize: "var(--text-xs)" }}
+            >
               <Maximize size={13} aria-hidden="true" />
               {room.size}
             </span>
@@ -138,7 +175,10 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
         </div>
 
         {availableUnitsText && (
-          <p className="mb-3 text-[var(--color-primary)]" style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>
+          <p
+            className="mb-3 text-[var(--color-primary)]"
+            style={{ fontSize: "var(--text-xs)", fontWeight: 600 }}
+          >
             {availableUnitsText}
           </p>
         )}
@@ -146,7 +186,7 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
         {/* Description */}
         <p
           className="text-[var(--color-text-muted)] mb-4 flex-1"
-          style={{ fontSize: 'var(--text-sm)', lineHeight: 1.6 }}
+          style={{ fontSize: "var(--text-sm)", lineHeight: 1.6 }}
         >
           {room.description}
         </p>
@@ -159,32 +199,56 @@ export default function RoomCard({ room, checkIn, checkOut, guests, nights = 1, 
         </div>
 
         {/* Price + CTA */}
-        <div className="pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div
+          className="pt-4"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-            <div className="text-[var(--color-text-faint)]" style={{ fontSize: 'var(--text-xs)' }}>a partir de</div>
-            <div
-              className="text-[var(--color-primary)]"
-              style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', fontWeight: 700, lineHeight: 1 }}
-            >
-              {isPriceOnRequest ? 'A consultar' : formatBRL(room.pricePerNight)}
-            </div>
-            {!isPriceOnRequest && (
-              <div className="text-[var(--color-text-faint)]" style={{ fontSize: 'var(--text-xs)' }}>/noite</div>
-            )}
-            {!isPriceOnRequest && nights > 1 && (
-              <div className="text-[var(--color-text-muted)] mt-0.5" style={{ fontSize: 'var(--text-xs)' }}>
-                {formatBRL(room.pricePerNight * nights)} total ({nights} noites)
+              <div
+                className="text-[var(--color-text-faint)]"
+                style={{ fontSize: "var(--text-xs)" }}
+              >
+                a partir de
               </div>
-            )}
+              <div
+                className="text-[var(--color-primary)]"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "var(--text-xl)",
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+              >
+                {isPriceOnRequest
+                  ? "A consultar"
+                  : formatBRL(room.pricePerNight)}
+              </div>
+              {!isPriceOnRequest && (
+                <div
+                  className="text-[var(--color-text-faint)]"
+                  style={{ fontSize: "var(--text-xs)" }}
+                >
+                  /noite
+                </div>
+              )}
+              {!isPriceOnRequest && nights > 1 && (
+                <div
+                  className="text-[var(--color-text-muted)] mt-0.5"
+                  style={{ fontSize: "var(--text-xs)" }}
+                >
+                  {formatBRL(room.pricePerNight * nights)} total ({nights}{" "}
+                  noites)
+                </div>
+              )}
             </div>
             <button
               onClick={() => onBook(room)}
               className="btn btn-primary flex items-center justify-center gap-1.5 shrink-0 w-full sm:w-auto"
-              style={{ padding: '0.6rem 1.1rem', fontSize: 'var(--text-sm)' }}
+              style={{ padding: "0.6rem 1.1rem", fontSize: "var(--text-sm)" }}
               aria-label={`Reservar ${room.name}`}
             >
-              {isPriceOnRequest ? 'Consultar' : 'Reservar'}
+              {isPriceOnRequest ? "Consultar" : "Reservar"}
               <ArrowRight size={15} aria-hidden="true" />
             </button>
           </div>

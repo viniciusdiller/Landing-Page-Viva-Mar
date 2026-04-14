@@ -156,16 +156,43 @@ export const MOCK_ROOMS: RoomType[] = [
   },
 ];
 
-export async function fetchRooms(_params?: {
-  checkIn?: string;
-  checkOut?: string;
-  guests?: number;
-}): Promise<RoomType[]> {
-  await new Promise((r) => setTimeout(r, 400));
-  return MOCK_ROOMS.filter(
-    (room) =>
-      room.available &&
-      (room.availableUnits ?? 0) > 0 &&
-      (!_params?.guests || room.maxOccupancy >= _params.guests),
-  );
+// export async function fetchRooms(_params?: {
+//   checkIn?: string;
+//   checkOut?: string;
+//   guests?: number;
+// }): Promise<RoomType[]> {
+//   await new Promise((r) => setTimeout(r, 400));
+//   return MOCK_ROOMS.filter(
+//     (room) =>
+//       room.available &&
+//       (room.availableUnits ?? 0) > 0 &&
+//       (!_params?.guests || room.maxOccupancy >= _params.guests),
+//   );
+// }
+
+export async function fetchRooms(params?: any) {
+  try {
+    const response = await fetch("http://127.0.0.1:3001/api/public/viva-mar", {
+      cache: "no-store",
+    });
+
+    if (!response.ok) throw new Error("Falha na rede");
+
+    const saasRooms = await response.json();
+
+    // O Adaptador: Transforma o formato do SaaS no formato da Landing Page
+    return saasRooms.map((room: any) => ({
+      id: room.id,
+      name: room.name,
+      // O SaaS usa maxGuests, a LP usa capacity
+      capacity: room.maxGuests || 2,
+      // Colocamos um preço fixo de teste, já que as tarifas reais ficam no Channex
+      pricePerNight: 450,
+      // Inserimos um array com uma imagem dinâmica baseada no ID do quarto
+      images: [`https://picsum.photos/seed/${room.id}/900/675`],
+    }));
+  } catch (error) {
+    console.error("SaaS local está desligado ou inacessível:", error);
+    return [];
+  }
 }

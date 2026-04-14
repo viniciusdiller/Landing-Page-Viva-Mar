@@ -330,7 +330,12 @@ export default function CheckoutModal({
                 {submitting ? "Processando..." : "Confirmar Reserva"}
               </button>
 
-              <MercadoPagoCheckout />
+              <MercadoPagoCheckout
+                room={room}
+                bookingContext={bookingContext}
+                guest={guest}
+                onClose={onClose}
+              />
 
               {resultMessage && (
                 <p className="text-center text-sm p-3 bg-gray-50 border border-gray-100 text-gray-800">
