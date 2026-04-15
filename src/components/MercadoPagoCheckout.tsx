@@ -2,28 +2,38 @@
 
 import { ShieldCheck } from "lucide-react";
 
-// Adicionei props para recebermos os dados da reserva que vem do CheckoutModal
+// Atualizamos para receber o guest e o total
 export default function MercadoPagoCheckout({
   room,
   bookingContext,
   guest,
+  total,
   onClose,
 }: any) {
   const handleLocalBooking = async (e: any) => {
-    e.preventDefault(); // Impede o botão de recarregar a página sem querer
+    e.preventDefault();
 
     try {
-      // 1. Vamos debugar pra ver se os dados estão chegando!
-      console.log("DADOS QUE CHEGARAM NO BOTAO:", { room, bookingContext });
-
-      // 2. Trava de segurança
       if (!room || !room.id) {
         throw new Error(
           "Os dados do quarto não chegaram no componente de pagamento.",
         );
       }
 
-      // 3. O Fetch Real
+      if (!bookingContext?.checkIn || !bookingContext?.checkOut) {
+        alert(
+          "Por favor, selecione as datas de Check-in e Check-out no calendário antes de prosseguir.",
+        );
+        return;
+      }
+
+      if (!guest?.firstName || !guest?.email || !guest?.phone) {
+        alert(
+          "Por favor, preencha nome, e-mail e telefone antes de prosseguir.",
+        );
+        return;
+      }
+
       const response = await fetch(
         "http://127.0.0.1:3001/api/public/viva-mar",
         {
@@ -31,18 +41,19 @@ export default function MercadoPagoCheckout({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             roomId: room.id,
-            checkIn: bookingContext?.checkIn || "2026-05-01",
-            checkOut: bookingContext?.checkOut || "2026-05-05",
-            amount: (room.pricePerNight || 0) * (bookingContext?.nights || 1),
-            guestName: guest?.firstName
-              ? `${guest.firstName} ${guest.lastName}`
-              : "Vineco (Teste Local)",
+            checkIn: bookingContext.checkIn,
+            checkOut: bookingContext.checkOut,
+            amount: total,
+            guestName: `${guest.firstName} ${guest.lastName}`.trim(),
+            guestEmail: guest.email,
+            guestPhone: guest.phone,
+            notes: guest.specialRequests || "Nenhuma observação.",
           }),
         },
       );
 
       if (response.ok) {
-        alert("Sucesso! Reserva injetada no SaaS Sancho.");
+        alert("Reserva confirmada! Os dados reais foram salvos no SaaS.");
         if (onClose) onClose();
       } else {
         const errorData = await response.json();
@@ -50,7 +61,6 @@ export default function MercadoPagoCheckout({
         alert("O servidor respondeu com erro. Veja o console.");
       }
     } catch (error: any) {
-      // 4. Agora sim veremos o erro real!
       console.error("ERRO NO JAVASCRIPT:", error);
       alert(`Erro no código da Landing Page: ${error.message}`);
     }
@@ -64,8 +74,8 @@ export default function MercadoPagoCheckout({
             Modo de Teste Local Ativado
           </h4>
           <p className="text-xs text-vm-muted">
-            O fluxo do Mercado Pago foi temporariamente desabilitado para testes
-            locais com o SaaS Sancho.
+            O fluxo do Mercado Pago está desabilitado. A reserva será salva no
+            banco de dados.
           </p>
         </div>
         <ShieldCheck className="text-vm-teal-600" size={18} />

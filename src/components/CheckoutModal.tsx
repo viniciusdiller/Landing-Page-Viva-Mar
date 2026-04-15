@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, TicketPercent, Loader2 } from "lucide-react";
+import {
+  X,
+  TicketPercent,
+  Loader2,
+  Calendar,
+  Users,
+  AlertCircle,
+} from "lucide-react";
 import MercadoPagoCheckout from "./MercadoPagoCheckout";
 import { formatBRL, submitReservation } from "@/lib/booking";
 import { validateCoupon } from "@/lib/coupons";
@@ -134,6 +141,9 @@ export default function CheckoutModal({
   // Estilo minimalista para os inputs do formulário
   const inputClassName =
     "w-full border-0 border-b border-gray-300 py-2.5 px-0 focus:ring-0 focus:border-black bg-transparent text-[15px] transition-colors outline-none placeholder:text-gray-400";
+
+  const hasDates = Boolean(bookingContext.checkIn && bookingContext.checkOut);
+  const exceedsCapacity = room ? bookingContext.guests > room.capacity : false;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 md:p-8">
@@ -268,7 +278,69 @@ export default function CheckoutModal({
           >
             <div>
               <h4 className="text-xs uppercase tracking-[0.2em] font-semibold text-gray-800 mb-6">
-                Dados do Hóspede
+                Informações de Reserva
+              </h4>
+
+              {!hasDates ? (
+                <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-lg mb-8 flex items-start gap-3">
+                  <Calendar
+                    className="text-amber-600 mt-0.5"
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] uppercase tracking-widest font-bold text-amber-900">
+                      Período não definido
+                    </span>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      Para prosseguir, selecione as datas de{" "}
+                      <strong>Check-in</strong> e <strong>Check-out</strong> no
+                      buscador e clique em <strong>BUSCAR</strong>.
+                    </p>
+                  </div>
+                </div>
+              ) : exceedsCapacity ? (
+                <div className="bg-red-50/50 border border-red-100 p-4 rounded-lg mb-8 flex items-start gap-3">
+                  <AlertCircle
+                    className="text-red-600 mt-0.5"
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] uppercase tracking-widest font-bold text-red-900">
+                      Capacidade Excedida
+                    </span>
+                    <p className="text-xs text-red-800 leading-relaxed">
+                      Este quarto acomoda até {room.capacity} hóspedes. Por
+                      favor, ajuste o número de pessoas ou selecione uma
+                      acomodação de maior porte.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-vm-teal-50/30 border border-vm-teal-100 p-4 rounded-lg mb-8 flex items-start gap-3">
+                  <Calendar
+                    className="text-vm-teal-600 mt-0.5"
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] uppercase tracking-widest font-bold text-vm-teal-900">
+                      Reserva Confirmada para o Período
+                    </span>
+                    <p className="text-xs text-vm-teal-800 leading-relaxed">
+                      {formatDateBR(bookingContext.checkIn)} até{" "}
+                      {formatDateBR(bookingContext.checkOut)}
+                      <span className="mx-2 opacity-50">•</span>
+                      {bookingContext.nights} noites para{" "}
+                      {bookingContext.guests} hóspedes.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <h4 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-gray-400 mb-6">
+                Dados do Titular
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
@@ -318,31 +390,28 @@ export default function CheckoutModal({
               </div>
             </div>
 
-            <div className="mt-10 space-y-4">
-              <button
-                type="submit"
-                className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] text-xs font-semibold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2"
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : null}
-                {submitting ? "Processando..." : "Confirmar Reserva"}
-              </button>
+            {hasDates && !exceedsCapacity && (
+              <div className="mt-10 space-y-4">
+                <button
+                  type="submit"
+                  className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] text-xs font-semibold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : null}
+                  {submitting ? "Processando..." : "Confirmar Reserva"}
+                </button>
 
-              <MercadoPagoCheckout
-                room={room}
-                bookingContext={bookingContext}
-                guest={guest}
-                onClose={onClose}
-              />
-
-              {resultMessage && (
-                <p className="text-center text-sm p-3 bg-gray-50 border border-gray-100 text-gray-800">
-                  {resultMessage}
-                </p>
-              )}
-            </div>
+                <MercadoPagoCheckout
+                  room={room}
+                  bookingContext={bookingContext}
+                  guest={guest}
+                  total={total}
+                  onClose={onClose}
+                />
+              </div>
+            )}
           </form>
         </div>
       </div>
