@@ -144,6 +144,7 @@ export default function CheckoutModal({
 
   const hasDates = Boolean(bookingContext.checkIn && bookingContext.checkOut);
   const exceedsCapacity = room ? bookingContext.guests > room.capacity : false;
+  const isFull = room ? (room as any).remainingQuantity <= 0 : false;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 md:p-8">
@@ -390,7 +391,7 @@ export default function CheckoutModal({
               </div>
             </div>
 
-            {hasDates && !exceedsCapacity && (
+            {hasDates && !exceedsCapacity && !isFull && (
               <div className="mt-10 space-y-4">
                 <button
                   type="submit"

@@ -12,7 +12,7 @@
 //   maxOccupancy -> room_type.attributes.occupancy
 //   pricePerNight-> rate_plan (normalizado para BRL)
 // ============================================================
-
+const API = process.env.NEXT_PUBLIC_API_URL;
 import type { RoomType } from "@/types";
 
 export const MOCK_ROOMS: RoomType[] = [
@@ -156,27 +156,20 @@ export const MOCK_ROOMS: RoomType[] = [
   },
 ];
 
-// export async function fetchRooms(_params?: {
-//   checkIn?: string;
-//   checkOut?: string;
-//   guests?: number;
-// }): Promise<RoomType[]> {
-//   await new Promise((r) => setTimeout(r, 400));
-//   return MOCK_ROOMS.filter(
-//     (room) =>
-//       room.available &&
-//       (room.availableUnits ?? 0) > 0 &&
-//       (!_params?.guests || room.maxOccupancy >= _params.guests),
-//   );
-// }
+export async function fetchRooms(params?: {
+  checkIn?: string;
+  checkOut?: string;
+  guests?: number;
+}) {
+  const { checkIn, checkOut } = params || {};
 
-export async function fetchRooms(params?: any) {
+  let url = `${API}/api/public/viva-mar`;
+  if (checkIn && checkOut) {
+    url += `?checkIn=${checkIn}&checkOut=${checkOut}`;
+  }
   try {
-    const response = await fetch("http://127.0.0.1:3001/api/public/viva-mar", {
-      cache: "no-store",
-    });
+    const response = await fetch(url, { cache: "no-store" });
     const saasRooms = await response.json();
-
     return saasRooms.map((room: any) => {
       let customAmenities = [
         { label: "Wi-Fi", icon: "wifi" },
@@ -197,15 +190,17 @@ export async function fetchRooms(params?: any) {
       }
 
       return {
-        id: room.localRoomId,
+        id: room.id,
         name: room.name,
         capacity: room.maxGuests,
         pricePerNight: Number(room.price),
-        images: [`https://picsum.photos/seed/${room.localRoomId}/900/675`],
-        amenities: customAmenities,
+        images: [`https://picsum.photos/seed/${room.id}/900/675`],
+        amenities: customAmenities, // Suas tags
+        remainingQuantity: room.remainingQuantity, // <--- ESSENCIAL PARA O MODAL SABER SE TÁ LOTADO
       };
     });
   } catch (error) {
-    return [];
+    console.error("Erro ao buscar quartos:", error);
+    return []; // Retorna lista vazia para não quebrar a tela inteira
   }
 }

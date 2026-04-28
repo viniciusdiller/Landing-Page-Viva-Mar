@@ -1,7 +1,7 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 // Atualizamos para receber o guest e o total
 export default function MercadoPagoCheckout({
   room,
@@ -34,23 +34,21 @@ export default function MercadoPagoCheckout({
         return;
       }
 
-      const response = await fetch(
-        "http://127.0.0.1:3001/api/public/viva-mar",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            roomId: room.id,
-            checkIn: bookingContext.checkIn,
-            checkOut: bookingContext.checkOut,
-            amount: total,
-            guestName: `${guest.firstName} ${guest.lastName}`.trim(),
-            guestEmail: guest.email,
-            guestPhone: guest.phone,
-            notes: guest.specialRequests || "Nenhuma observação.",
-          }),
-        },
-      );
+      const response = await fetch(`${API_URL}/api/public/viva-mar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId: room.id,
+          checkIn: bookingContext.checkIn,
+          checkOut: bookingContext.checkOut,
+          amount: total,
+          guestName: `${guest.firstName} ${guest.lastName}`.trim(),
+          guestEmail: guest.email,
+          guestPhone: guest.phone,
+          guestCpf: guest.cpf,
+          notes: guest.specialRequests || "Nenhuma observação.",
+        }),
+      });
 
       if (response.ok) {
         alert("Reserva confirmada! Os dados reais foram salvos no SaaS.");
