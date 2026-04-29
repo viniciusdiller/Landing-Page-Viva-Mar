@@ -62,7 +62,15 @@ export default function CheckoutModal({
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   useEffect(() => {
-    if (open) setResultMessage("");
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
   }, [open]);
 
   const subtotal = useMemo(() => {
