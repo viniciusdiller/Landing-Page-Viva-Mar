@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import MercadoPagoCheckout from "./MercadoPagoCheckout";
 import { formatBRL, submitReservation } from "@/lib/booking";
-import { validateCoupon } from "@/lib/coupons";
+
 import type { BookingFormData, GuestData, RoomType } from "@/types";
 
 interface CheckoutModalProps {
@@ -59,6 +59,7 @@ export default function CheckoutModal({
   const [couponMessage, setCouponMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [resultMessage, setResultMessage] = useState("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   useEffect(() => {
     if (open) setResultMessage("");
@@ -69,29 +70,6 @@ export default function CheckoutModal({
     return room.pricePerNight * Math.max(1, bookingContext.nights);
   }, [room, bookingContext.nights]);
 
-  useEffect(() => {
-    if (!couponInput.trim()) {
-      setAppliedCoupon(undefined);
-      setDiscountAmount(0);
-      setCouponMessage("");
-      return;
-    }
-
-    const result = validateCoupon(
-      couponInput.trim(),
-      bookingContext.nights,
-      subtotal,
-    );
-    if (result.valid && result.coupon) {
-      setAppliedCoupon(result.coupon.code);
-      setDiscountAmount(result.discountAmount);
-    } else {
-      setAppliedCoupon(undefined);
-      setDiscountAmount(0);
-    }
-    setCouponMessage(result.message);
-  }, [couponInput, bookingContext.nights, subtotal]);
-
   const total = Math.max(0, subtotal - discountAmount);
 
   if (!open || !room) return null;
@@ -100,9 +78,47 @@ export default function CheckoutModal({
     setGuest((prev) => ({ ...prev, [key]: value }));
   }
 
-  function applyCoupon() {
+  async function applyCoupon() {
     if (!couponInput.trim()) {
       setCouponMessage("Digite um cupom para aplicar.");
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    setCouponMessage("");
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/public/viva-mar/validate-coupon`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: couponInput.trim() }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        setAppliedCoupon(data.code);
+        const discountValue = (subtotal * data.discountPercentage) / 100;
+        setDiscountAmount(discountValue);
+        setCouponMessage(
+          `Cupom ${data.code} aplicado! ${data.discountPercentage}% OFF`,
+        );
+      } else {
+        setAppliedCoupon(undefined);
+        setDiscountAmount(0);
+        setCouponMessage(data.error || "Cupom inválido.");
+      }
+    } catch (error) {
+      setAppliedCoupon(undefined);
+      setDiscountAmount(0);
+      setCouponMessage("Erro ao conectar com o servidor. Tente novamente.");
+    } finally {
+      setIsApplyingCoupon(false);
     }
   }
 
@@ -138,7 +154,6 @@ export default function CheckoutModal({
     }
   }
 
-  // Estilo minimalista para os inputs do formulário
   const inputClassName =
     "w-full border-0 border-b border-gray-300 py-2.5 px-0 focus:ring-0 focus:border-black bg-transparent text-[15px] transition-colors outline-none placeholder:text-gray-400";
 
@@ -179,22 +194,20 @@ export default function CheckoutModal({
         </div>
 
         {/* Corpo do Modal - Grid 2 colunas */}
-        <div className="flex flex-col lg:flex-row overflow-y-auto">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
           {/* Lado Esquerdo - Resumo do Quarto */}
-          <aside className="lg:w-2/5 bg-[#ececec] p-6 lg:p-8 flex flex-col border-r border-gray-200">
+          <aside className="lg:w-2/5 bg-[#ececec] p-6 lg:p-8 flex flex-col border-r border-gray-200 lg:overflow-y-auto">
             <img
               src={room.images[0]}
               alt={room.name}
               className="w-full aspect-[4/3] object-cover mb-6 shadow-sm grayscale-[10%]"
             />
-
             <h4
               style={{ fontFamily: "var(--font-display)" }}
               className="text-2xl font-semibold mb-2 text-gray-900"
             >
               {room.name}
             </h4>
-
             {/* Comodidades (Amenities) adicionadas aqui */}
             {room.amenities && room.amenities.length > 0 && (
               <div className="flex flex-wrap gap-x-2 gap-y-1 mb-5">
@@ -211,7 +224,6 @@ export default function CheckoutModal({
                 ))}
               </div>
             )}
-
             <p className="text-gray-500 text-xs tracking-wider uppercase mb-8 leading-relaxed">
               {bookingContext.checkIn
                 ? formatDateBR(bookingContext.checkIn)
@@ -223,7 +235,6 @@ export default function CheckoutModal({
               <br />
               {bookingContext.guests} hóspede(s)
             </p>
-
             <div className="space-y-3 pt-6 border-t border-gray-300/60 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
@@ -240,42 +251,56 @@ export default function CheckoutModal({
                 <strong className="text-lg">{formatBRL(total)}</strong>
               </div>
             </div>
-
             {/* Cupom */}
-            <div className="mt-8 pt-6 border-t border-gray-300/60">
-              <label className="block mb-3 text-xs tracking-widest uppercase font-semibold text-gray-600">
+
+            <div className="mt-8 pt-6 border-t border-gray-300/60 pb-2">
+              <label className="block mb-3 text-[10px] tracking-widest uppercase font-semibold text-gray-500">
                 <TicketPercent size={14} className="inline mr-2 -mt-0.5" />
-                Cupom
+                Cupom Promocional
               </label>
-              <div className="flex gap-3">
+
+              {/* Container Unificado (Input + Botão) */}
+              <div className="flex w-full bg-white border border-gray-300 focus-within:border-black transition-colors shadow-sm">
                 <input
-                  className="flex-1 bg-white border border-gray-200 px-3 py-2 text-sm outline-none focus:border-black transition-colors"
+                  className="flex-1 bg-transparent border-0 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-0 placeholder:text-gray-400 uppercase disabled:opacity-50"
                   placeholder="EX: VIVAMAR10"
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  disabled={appliedCoupon !== undefined || isApplyingCoupon}
                 />
                 <button
                   type="button"
-                  className="px-4 py-2 bg-gray-200 text-gray-800 text-xs uppercase tracking-widest font-semibold hover:bg-gray-300 transition-colors"
+                  className="px-6 bg-black text-white text-[10px] uppercase tracking-[0.2em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]"
                   onClick={applyCoupon}
+                  disabled={isApplyingCoupon || appliedCoupon !== undefined}
                 >
-                  Aplicar
+                  {isApplyingCoupon ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : appliedCoupon ? (
+                    "Aplicado"
+                  ) : (
+                    "Aplicar"
+                  )}
                 </button>
               </div>
+
               {couponMessage && (
                 <p
-                  className={`mt-2 text-xs ${appliedCoupon ? "text-[var(--color-success)]" : "text-red-500"}`}
+                  className={`mt-3 text-xs font-medium ${
+                    appliedCoupon
+                      ? "text-[var(--color-success)]"
+                      : "text-red-500"
+                  }`}
                 >
                   {couponMessage}
                 </p>
               )}
             </div>
           </aside>
-
           {/* Lado Direito - Formulário */}
           <form
             onSubmit={handleSubmitReservation}
-            className="lg:w-3/5 p-6 lg:p-8 flex flex-col justify-between bg-white"
+            className="lg:w-3/5 p-6 lg:p-8 flex flex-col justify-between bg-white lg:overflow-y-auto "
           >
             <div>
               <h4 className="text-xs uppercase tracking-[0.2em] font-semibold text-gray-800 mb-6">
