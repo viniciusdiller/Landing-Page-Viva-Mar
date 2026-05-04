@@ -12,7 +12,7 @@
 //   maxOccupancy -> room_type.attributes.occupancy
 //   pricePerNight-> rate_plan (normalizado para BRL)
 // ============================================================
-
+const API = process.env.NEXT_PUBLIC_API_URL;
 import type { RoomType } from "@/types";
 
 export const MOCK_ROOMS: RoomType[] = [
@@ -156,16 +156,51 @@ export const MOCK_ROOMS: RoomType[] = [
   },
 ];
 
-export async function fetchRooms(_params?: {
+export async function fetchRooms(params?: {
   checkIn?: string;
   checkOut?: string;
   guests?: number;
-}): Promise<RoomType[]> {
-  await new Promise((r) => setTimeout(r, 400));
-  return MOCK_ROOMS.filter(
-    (room) =>
-      room.available &&
-      (room.availableUnits ?? 0) > 0 &&
-      (!_params?.guests || room.maxOccupancy >= _params.guests),
-  );
+}) {
+  const { checkIn, checkOut } = params || {};
+
+  let url = `${API}/api/public/viva-mar`;
+  if (checkIn && checkOut) {
+    url += `?checkIn=${checkIn}&checkOut=${checkOut}`;
+  }
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    const saasRooms = await response.json();
+    return saasRooms.map((room: any) => {
+      let customAmenities = [
+        { label: "Wi-Fi", icon: "wifi" },
+        { label: "Estacionamento", icon: "parking" },
+        { label: "TV Smart", icon: "tv" },
+        { label: "Frigobar", icon: "refrigerator" },
+        { label: "Varanda com Rede", icon: "hammock" },
+      ];
+
+      if (room.localRoomId === "vm-standard") {
+        customAmenities.push({ label: "Ventilador de Teto", icon: "fan" });
+      } else {
+        customAmenities.push({ label: "Ar Condicionado", icon: "snowflake" });
+      }
+
+      if (room.localRoomId === "vm-duplo-deluxe") {
+        customAmenities.push({ label: "Vista Mar", icon: "waves" });
+      }
+
+      return {
+        id: room.id,
+        name: room.name,
+        capacity: room.maxGuests,
+        pricePerNight: Number(room.price),
+        images: [`https://picsum.photos/seed/${room.id}/900/675`],
+        amenities: customAmenities, // Suas tags
+        remainingQuantity: room.remainingQuantity, // <--- ESSENCIAL PARA O MODAL SABER SE TÁ LOTADO
+      };
+    });
+  } catch (error) {
+    console.error("Erro ao buscar quartos:", error);
+    return []; // Retorna lista vazia para não quebrar a tela inteira
+  }
 }
