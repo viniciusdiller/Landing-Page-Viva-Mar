@@ -27,6 +27,8 @@ export async function submitReservation(
     subtotal: formData.subtotal,
     discountCode: formData.discountCode ?? null,
     discountAmount: formData.discountAmount,
+    packages: formData.packages,
+    packagesTotal: formData.packagesTotal,
     total: formData.total,
     // Status inicial: aguardando pagamento.
     // Será atualizado para 'approved' pelo webhook do Mercado Pago.

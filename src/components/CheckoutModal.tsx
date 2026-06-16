@@ -8,11 +8,13 @@ import {
   Calendar,
   Users,
   AlertCircle,
+  Gift,
 } from "lucide-react";
 import MercadoPagoCheckout from "./MercadoPagoCheckout";
 import { formatBRL, submitReservation } from "@/lib/booking";
+import { fetchPackages, calculatePackagesTotal } from "@/lib/api/packages";
 
-import type { BookingFormData, GuestData, RoomType } from "@/types";
+import type { BookingFormData, GuestData, RoomType, Package, SelectedPackage } from "@/types";
 
 interface CheckoutModalProps {
   open: boolean;
@@ -60,12 +62,30 @@ export default function CheckoutModal({
   const [submitting, setSubmitting] = useState(false);
   const [resultMessage, setResultMessage] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [selectedPackages, setSelectedPackages] = useState<Map<string, number>>(
+    new Map(),
+  );
+  const [loadingPackages, setLoadingPackages] = useState(false);
+  const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
+      // Carregar pacotes quando o modal abre
+      setLoadingPackages(true);
+      fetchPackages()
+        .then(setPackages)
+        .catch((error) => {
+          console.error("Erro ao carregar pacotes:", error);
+          setPackages([]);
+        })
+        .finally(() => setLoadingPackages(false));
     } else {
       document.body.style.overflow = "unset";
+      // Limpar pacotes selecionados quando fecha
+      setSelectedPackages(new Map());
+      setIsPackagesModalOpen(false);
     }
 
     return () => {
@@ -78,12 +98,37 @@ export default function CheckoutModal({
     return room.pricePerNight * Math.max(1, bookingContext.nights);
   }, [room, bookingContext.nights]);
 
-  const total = Math.max(0, subtotal - discountAmount);
+  const packagesTotal = useMemo(() => {
+    return calculatePackagesTotal(
+      Array.from(selectedPackages.entries()).map(([id, quantity]) => ({
+        id,
+        quantity,
+      })),
+    );
+  }, [selectedPackages]);
+
+  const total = Math.max(0, subtotal + packagesTotal - discountAmount);
+  const selectedPackagesCount = Array.from(selectedPackages.values()).reduce(
+    (acc, quantity) => acc + quantity,
+    0,
+  );
 
   if (!open || !room) return null;
 
   function updateGuest<K extends keyof GuestData>(key: K, value: GuestData[K]) {
     setGuest((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function togglePackage(packageId: string, quantity: number) {
+    setSelectedPackages((prev) => {
+      const updated = new Map(prev);
+      if (quantity > 0) {
+        updated.set(packageId, quantity);
+      } else {
+        updated.delete(packageId);
+      }
+      return updated;
+    });
   }
 
   async function applyCoupon() {
@@ -134,6 +179,20 @@ export default function CheckoutModal({
     e.preventDefault();
     if (!room) return;
 
+    const selectedPackagesArray: SelectedPackage[] = Array.from(
+      selectedPackages.entries(),
+    ).map(([id, quantity]) => {
+      const pkg = packages.find((p) => p.id === id);
+      return {
+        id,
+        name: pkg?.name || "",
+        description: pkg?.description || "",
+        price: pkg?.price || 0,
+        icon: pkg?.icon,
+        quantity,
+      };
+    });
+
     const formData: BookingFormData = {
       roomId: room.id,
       propertyId: room.propertyId,
@@ -145,6 +204,8 @@ export default function CheckoutModal({
       subtotal,
       discountCode: appliedCoupon,
       discountAmount,
+      packages: selectedPackagesArray,
+      packagesTotal,
       total,
       guest,
     };
@@ -243,11 +304,64 @@ export default function CheckoutModal({
               <br />
               {bookingContext.guests} hóspede(s)
             </p>
+
+            {/* Pacotes e Adicionais */}
+            <div className="mb-8 pt-6 border-t border-gray-300/60">
+              <label className="block mb-4 text-[10px] tracking-widest uppercase font-semibold text-gray-500">
+                <Gift size={14} className="inline mr-2 -mt-0.5" />
+                Pacotes & Adicionais
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setIsPackagesModalOpen(true)}
+                className="w-full flex items-center justify-between border border-gray-300 bg-white hover:bg-gray-50 transition-colors px-4 py-3"
+              >
+                <span className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                  {selectedPackagesCount > 0
+                    ? `${selectedPackagesCount} adicional(is) selecionado(s)`
+                    : "Selecionar pacotes e adicionais"}
+                </span>
+                <span className="text-xs font-bold text-[var(--color-primary)]">
+                  {selectedPackagesCount > 0
+                    ? `+ ${formatBRL(packagesTotal)}`
+                    : "Abrir"}
+                </span>
+              </button>
+
+              {loadingPackages && (
+                <p className="mt-3 text-xs text-gray-500">Carregando pacotes...</p>
+              )}
+
+              {!loadingPackages && packages.length === 0 && (
+                <p className="mt-3 text-xs text-gray-400">
+                  Nenhum pacote disponível no momento.
+                </p>
+              )}
+
+              {packagesTotal > 0 && (
+                <div className="mt-4 pt-3 border-t border-gray-300/60 flex justify-between text-sm font-semibold text-gray-700">
+                  <span>Adicionais</span>
+                  <span className="text-[var(--color-primary)]">
+                    + {formatBRL(packagesTotal)}
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3 pt-6 border-t border-gray-300/60 text-sm">
               <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
+                <span>Subtotal (diária)</span>
                 <strong>{formatBRL(subtotal)}</strong>
               </div>
+              {packagesTotal > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Adicionais</span>
+                  <strong className="text-[var(--color-primary)]">
+                    + {formatBRL(packagesTotal)}
+                  </strong>
+                </div>
+              )}
               <div className="flex justify-between text-[var(--color-success)]">
                 <span>Desconto</span>
                 <strong>- {formatBRL(discountAmount)}</strong>
@@ -304,6 +418,7 @@ export default function CheckoutModal({
                 </p>
               )}
             </div>
+
           </aside>
           {/* Lado Direito - Formulário */}
           <form
@@ -448,6 +563,123 @@ export default function CheckoutModal({
             )}
           </form>
         </div>
+
+        {isPackagesModalOpen && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-6">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
+              onClick={() => setIsPackagesModalOpen(false)}
+              aria-label="Fechar seleção de pacotes"
+            />
+
+            <div className="relative w-full max-w-2xl max-h-[80vh] bg-white shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h4 className="text-xs uppercase tracking-[0.2em] font-semibold text-gray-800">
+                  Pacotes & Adicionais
+                </h4>
+                <button
+                  type="button"
+                  className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 transition-colors"
+                  onClick={() => setIsPackagesModalOpen(false)}
+                  aria-label="Fechar pacotes"
+                >
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-3">
+                {loadingPackages ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div
+                        key={`pkg-modal-skeleton-${i}`}
+                        className="h-20 bg-gray-100 animate-pulse rounded"
+                      />
+                    ))}
+                  </div>
+                ) : packages.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Nenhum pacote disponível no momento.
+                  </p>
+                ) : (
+                  packages.map((pkg) => {
+                    const quantity = selectedPackages.get(pkg.id) ?? 0;
+                    return (
+                      <div
+                        key={pkg.id}
+                        className="border border-gray-300 rounded p-3 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-sm font-semibold text-gray-900">
+                              {pkg.name}
+                            </h5>
+                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                              {pkg.description}
+                            </p>
+                          </div>
+                          <span className="text-sm font-bold text-[var(--color-primary)] whitespace-nowrap ml-2">
+                            {formatBRL(pkg.price)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              togglePackage(pkg.id, Math.max(0, quantity - 1))
+                            }
+                            className="w-8 h-8 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                            disabled={quantity === 0}
+                          >
+                            −
+                          </button>
+                          <span className="w-10 text-center text-sm font-semibold">
+                            {quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              togglePackage(pkg.id, Math.min(10, quantity + 1))
+                            }
+                            className="w-8 h-8 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                          >
+                            +
+                          </button>
+                          {quantity > 0 && (
+                            <span className="ml-auto text-xs sm:text-sm font-semibold text-gray-600">
+                              {formatBRL(pkg.price * quantity)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                <div className="text-sm text-gray-700">
+                  {selectedPackagesCount > 0
+                    ? `${selectedPackagesCount} item(ns) selecionado(s)`
+                    : "Nenhum adicional selecionado"}
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold text-[var(--color-primary)]">
+                    + {formatBRL(packagesTotal)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsPackagesModalOpen(false)}
+                    className="px-4 py-2 bg-black text-white text-[10px] uppercase tracking-[0.2em] font-semibold hover:bg-gray-800 transition-colors"
+                  >
+                    Concluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

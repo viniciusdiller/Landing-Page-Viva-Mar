@@ -12,17 +12,44 @@ export interface RoomAmenity {
   label: string;
 }
 
+export type RoomStatus = "active" | "maintenance";
+
+export interface PublicRoomApiItem {
+  id: string;
+  channexRoomTypeId: string;
+  name: string;
+  maxGuests: number;
+  status: RoomStatus;
+  price: number;
+  quantity: number;
+  amenities: string | null;
+  amenitiesList: string[];
+  photoUrls: string[];
+  remainingQuantity: number;
+}
+
+export interface FetchPublicRoomsParams {
+  checkIn?: string;
+  checkOut?: string;
+}
+
 export interface RoomType {
   // ID usado na API Channex: property_id + room_type_id
   id: string; // channex room_type_id
-  propertyId: string; // channex property_id
+  propertyId?: string; // channex property_id
+  channexRoomTypeId?: string;
   name: string;
   description: string;
   maxOccupancy: number;
   pricePerNight: number; // em BRL (centavos ÷ 100)
   priceOnRequest?: boolean; // quando o valor deve ser exibido como "A consultar"
   images: string[]; // URLs das fotos do quarto
+  photoUrls: string[];
+  status?: RoomStatus;
+  quantity?: number;
+  remainingQuantity?: number;
   amenities: RoomAmenity[];
+  amenitiesList: string[];
   available: boolean;
   availableUnits?: number; // quantidade de unidades disponíveis
   capacity: number; // número de hóspedes que o quarto acomoda
@@ -45,7 +72,7 @@ export interface GuestData {
 // --- RESERVA (pré criação) ---
 export interface BookingFormData {
   roomId: string;
-  propertyId: string;
+  propertyId?: string;
   checkIn: string; // ISO date string YYYY-MM-DD
   checkOut: string; // ISO date string YYYY-MM-DD
   guests: number;
@@ -54,6 +81,8 @@ export interface BookingFormData {
   subtotal: number;
   discountCode?: string;
   discountAmount: number; // valor em BRL deduzido
+  packages: SelectedPackage[]; // pacotes/adicionais selecionados
+  packagesTotal: number; // valor total dos pacotes
   total: number;
   guest: GuestData;
 }
@@ -72,7 +101,7 @@ export type PaymentStatus =
 export interface CreateBookingPayload {
   // Dados do quarto / propriedade
   roomId: string;
-  propertyId: string;
+  propertyId?: string;
 
   // Período
   checkIn: string;
@@ -88,6 +117,8 @@ export interface CreateBookingPayload {
   subtotal: number;
   discountCode: string | null;
   discountAmount: number;
+  packages: SelectedPackage[]; // pacotes/adicionais selecionados
+  packagesTotal: number; // valor total dos pacotes
   total: number; // valor final cobrado em BRL
 
   // Pagamento
@@ -130,6 +161,15 @@ export interface MercadoPagoWebhookPayload {
   };
 }
 
+// --- PACOTES / ADICIONAIS ---
+export interface Package {
+  id: string;
+  name: string;
+  description: string;
+  price: number; // em BRL
+  icon?: string; // nome do ícone Lucide
+}
+
 // --- COUPON / DESCONTO ---
 export interface DiscountCoupon {
   code: string;
@@ -138,6 +178,11 @@ export interface DiscountCoupon {
   minNights?: number;
   validUntil?: string;
   description: string;
+}
+
+// --- PACOTES SELECIONADOS NA RESERVA ---
+export interface SelectedPackage extends Package {
+  quantity: number; // quantidade do pacote
 }
 
 // --- BUSCA DE QUARTOS (SearchWidget) ---
