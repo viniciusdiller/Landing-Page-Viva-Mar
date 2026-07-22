@@ -62,6 +62,7 @@ export default function CheckoutModal({
   const [resultMessage, setResultMessage] = useState("");
   const [submitError, setSubmitError] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [guestsCount, setGuestsCount] = useState(bookingContext.guests);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [packages, setPackages] = useState<Package[]>([]);
   const [selectedPackages, setSelectedPackages] = useState<Map<string, number>>(
@@ -73,6 +74,10 @@ export default function CheckoutModal({
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
+      setResultMessage("");
+      setSubmitError(false);
+      setSubmitSuccess(false);
+      setGuestsCount(bookingContext.guests);
       // Carregar pacotes quando o modal abre
       setLoadingPackages(true);
       fetchPackages()
@@ -199,7 +204,7 @@ export default function CheckoutModal({
       propertyId: room.propertyId,
       checkIn: bookingContext.checkIn,
       checkOut: bookingContext.checkOut,
-      guests: bookingContext.guests,
+      guests: guestsCount,
       nights: Math.max(1, bookingContext.nights),
       pricePerNight: room.pricePerNight,
       subtotal,
@@ -235,7 +240,7 @@ export default function CheckoutModal({
     "w-full border-0 border-b border-gray-300 py-2.5 px-0 focus:ring-0 focus:border-black bg-transparent text-[15px] transition-colors outline-none placeholder:text-gray-400";
 
   const hasDates = Boolean(bookingContext.checkIn && bookingContext.checkOut);
-  const exceedsCapacity = room ? bookingContext.guests > room.capacity : false;
+  const exceedsCapacity = room ? guestsCount > room.capacity : false;
   const isFull = room ? (room as any).remainingQuantity <= 0 : false;
 
   return (
@@ -301,17 +306,49 @@ export default function CheckoutModal({
                 ))}
               </div>
             )}
-            <p className="text-gray-500 text-xs tracking-wider uppercase mb-8 leading-relaxed">
+            <p className="text-gray-500 text-xs tracking-wider uppercase mb-4 leading-relaxed">
               {bookingContext.checkIn
                 ? formatDateBR(bookingContext.checkIn)
                 : "Selecione"}{" "}
               →{" "}
               {bookingContext.checkOut
                 ? formatDateBR(bookingContext.checkOut)
-                : "Selecione"}{" "}
-              <br />
-              {bookingContext.guests} hóspede(s)
+                : "Selecione"}
             </p>
+            <div className="mb-8 flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setGuestsCount((current) => Math.max(1, current - 1))
+                  }
+                  className="w-7 h-7 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded hover:bg-gray-100 transition-colors disabled:opacity-40"
+                  disabled={guestsCount <= 1}
+                  aria-label="Diminuir número de hóspedes"
+                >
+                  −
+                </button>
+                <span className="w-6 text-center text-sm font-semibold text-gray-900">
+                  {guestsCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setGuestsCount((current) =>
+                      room ? Math.min(room.capacity, current + 1) : current + 1,
+                    )
+                  }
+                  className="w-7 h-7 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded hover:bg-gray-100 transition-colors disabled:opacity-40"
+                  disabled={room ? guestsCount >= room.capacity : false}
+                  aria-label="Aumentar número de hóspedes"
+                >
+                  +
+                </button>
+              </div>
+              <span className="text-xs tracking-wider uppercase text-gray-500">
+                hóspede(s){room ? ` · máx. ${room.capacity}` : ""}
+              </span>
+            </div>
 
             {/* Pacotes e Adicionais */}
             <div className="mb-8 pt-6 border-t border-gray-300/60">
@@ -490,7 +527,7 @@ export default function CheckoutModal({
                       {formatDateBR(bookingContext.checkOut)}
                       <span className="mx-2 opacity-50">•</span>
                       {bookingContext.nights} noites para{" "}
-                      {bookingContext.guests} hóspedes.
+                      {guestsCount} hóspedes.
                     </p>
                   </div>
                 </div>
