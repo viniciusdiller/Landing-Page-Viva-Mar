@@ -8,6 +8,7 @@ export default function MercadoPagoCheckout({
   bookingContext,
   guest,
   total,
+  couponCode,
   onClose,
 }: any) {
   const handleLocalBooking = async (e: any) => {
@@ -47,6 +48,9 @@ export default function MercadoPagoCheckout({
           guestPhone: guest.phone,
           guestCpf: guest.cpf,
           notes: guest.specialRequests || "Nenhuma observação.",
+          // O backend recalcula o preço sozinho a partir do quarto/datas;
+          // o desconto só é aplicado se o código do cupom for enviado aqui.
+          ...(couponCode ? { couponCode } : {}),
         }),
       });
 

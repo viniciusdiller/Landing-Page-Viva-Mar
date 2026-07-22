@@ -557,6 +557,7 @@ export default function CheckoutModal({
                   bookingContext={bookingContext}
                   guest={guest}
                   total={total}
+                  couponCode={appliedCoupon}
                   onClose={onClose}
                 />
               </div>
