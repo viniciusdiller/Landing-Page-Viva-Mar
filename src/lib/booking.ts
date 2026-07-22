@@ -1,78 +1,63 @@
-import type { BookingFormData, CreateBookingPayload, BookingResponse } from '@/types';
+import type { BookingFormData, BookingResponse } from '@/types';
+
+function getApiBaseUrl() {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_VIVAMAR_API_URL ?? process.env.NEXT_PUBLIC_API_URL;
+
+  if (!baseUrl) {
+    throw new Error('Defina NEXT_PUBLIC_API_URL para enviar reservas ao SaaS.');
+  }
+
+  return baseUrl.replace(/\/$/, '');
+}
 
 // ============================================================
 // submitReservation — Função principal de checkout
 // ============================================================
-// Fluxo completo:
-//   1. Monta o payload com todos os dados da reserva
-//   2. Cria um rascunho da reserva no SaaS (status: pending_payment)
-//   3. Obtém a preference_id do Mercado Pago
-//   4. O cliente paga via SDK do Mercado Pago
-//   5. O webhook /api/webhooks/mercadopago confirma o pagamento
-//   6. O SaaS sincroniza a reserva confirmada no Channex
+// Cria a reserva diretamente no SaaS (Saas-Sancho) via
+// POST /api/public/viva-mar. O preço final é sempre recalculado
+// no servidor a partir do quarto/datas/cupom — o `amount` enviado
+// aqui é apenas informativo.
+//
+// A cobrança real via Mercado Pago ainda não está integrada:
+// a reserva já nasce como "confirmed" no SaaS assim que este
+// POST tem sucesso.
 // ============================================================
 export async function submitReservation(
   formData: BookingFormData
 ): Promise<BookingResponse> {
-  // --- MONTAR PAYLOAD ---
-  const payload: CreateBookingPayload = {
-    roomId: formData.roomId,
-    propertyId: formData.propertyId,
-    checkIn: formData.checkIn,
-    checkOut: formData.checkOut,
-    nights: formData.nights,
-    guestCount: formData.guests,
-    guest: formData.guest,
-    pricePerNight: formData.pricePerNight,
-    subtotal: formData.subtotal,
-    discountCode: formData.discountCode ?? null,
-    discountAmount: formData.discountAmount,
-    packages: formData.packages,
-    packagesTotal: formData.packagesTotal,
-    total: formData.total,
-    // Status inicial: aguardando pagamento.
-    // Será atualizado para 'approved' pelo webhook do Mercado Pago.
-    paymentStatus: 'pending',
-    source: 'landing_page',
-    createdAt: new Date().toISOString(),
-  };
+  const baseUrl = getApiBaseUrl();
 
-  // ============================================================
-  // TODO: Substituir pelo fetch real:
-  //
-  // PASSO 1 — Criar reserva com status 'pending_payment' no SaaS:
-  //   const bookingRes = await fetch('/api/bookings/create', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify(payload),
-  //   });
-  //   const booking = await bookingRes.json();
-  //
-  // PASSO 2 — Gerar preferência no Mercado Pago:
-  //   const mpRes = await fetch('/api/payments/create-preference', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({ bookingId: booking.bookingId, total: payload.total }),
-  //   });
-  //   const { preferenceId } = await mpRes.json();
-  //
-  // PASSO 3 — Inicializar o SDK do Mercado Pago com preferenceId
-  //   e redirecionar para o checkout ou renderizar o Brick.
-  //
-  // PASSO 4 — Aguardar o webhook em /api/webhooks/mercadopago
-  //   para confirmar o pagamento e atualizar a reserva no Channex.
-  // ============================================================
+  const response = await fetch(`${baseUrl}/api/public/viva-mar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      roomId: formData.roomId,
+      checkIn: formData.checkIn,
+      checkOut: formData.checkOut,
+      amount: formData.total,
+      guestName: `${formData.guest.firstName} ${formData.guest.lastName}`.trim(),
+      guestEmail: formData.guest.email,
+      guestPhone: formData.guest.phone,
+      guestCpf: formData.guest.cpf,
+      notes: formData.guest.specialRequests || 'Nenhuma observação.',
+      ...(formData.discountCode ? { couponCode: formData.discountCode } : {}),
+    }),
+  });
 
-  console.log('[submitReservation] Payload para a API:', payload);
+  const data = await response.json().catch(() => null);
 
-  // Mock — simula resposta da API
-  await new Promise((r) => setTimeout(r, 1200));
+  if (!response.ok) {
+    throw new Error(
+      data?.error || 'Falha ao criar a reserva. Tente novamente.',
+    );
+  }
 
   return {
     success: true,
-    bookingId: `BK-${Date.now()}`,
-    status: 'pending_payment',
-    message: 'Reserva criada! Conclua o pagamento para confirmar.',
+    bookingId: data.id,
+    status: data.status === 'confirmed' ? 'confirmed' : 'pending_payment',
+    message: 'Reserva confirmada! Em breve você receberá os detalhes por e-mail.',
   };
 }
 

@@ -10,7 +10,6 @@ import {
   AlertCircle,
   Gift,
 } from "lucide-react";
-import MercadoPagoCheckout from "./MercadoPagoCheckout";
 import { formatBRL, submitReservation } from "@/lib/booking";
 import { fetchPackages, calculatePackagesTotal } from "@/lib/api/packages";
 
@@ -61,6 +60,8 @@ export default function CheckoutModal({
   const [couponMessage, setCouponMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [resultMessage, setResultMessage] = useState("");
+  const [submitError, setSubmitError] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [packages, setPackages] = useState<Package[]>([]);
   const [selectedPackages, setSelectedPackages] = useState<Map<string, number>>(
@@ -216,8 +217,15 @@ export default function CheckoutModal({
     try {
       const response = await submitReservation(formData);
       setResultMessage(response.message);
-    } catch {
-      setResultMessage("Falha ao criar a reserva. Tente novamente.");
+      setSubmitError(false);
+      setSubmitSuccess(true);
+    } catch (error) {
+      setResultMessage(
+        error instanceof Error
+          ? error.message
+          : "Falha ao criar a reserva. Tente novamente.",
+      );
+      setSubmitError(true);
     } finally {
       setSubmitting(false);
     }
@@ -524,9 +532,10 @@ export default function CheckoutModal({
                 />
                 <input
                   className={`${inputClassName} sm:col-span-2`}
-                  placeholder="CPF (opcional)"
+                  placeholder="CPF"
                   value={guest.cpf}
                   onChange={(e) => updateGuest("cpf", e.target.value)}
+                  required
                 />
                 <textarea
                   className={`${inputClassName} sm:col-span-2 min-h-[80px] resize-none`}
@@ -543,23 +552,28 @@ export default function CheckoutModal({
               <div className="mt-10 space-y-4">
                 <button
                   type="submit"
-                  className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] text-xs font-semibold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2"
-                  disabled={submitting}
+                  className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] text-xs font-semibold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 disabled:opacity-60"
+                  disabled={submitting || submitSuccess}
                 >
                   {submitting ? (
                     <Loader2 size={16} className="animate-spin" />
                   ) : null}
-                  {submitting ? "Processando..." : "Confirmar Reserva"}
+                  {submitting
+                    ? "Processando..."
+                    : submitSuccess
+                      ? "Reserva Confirmada"
+                      : "Confirmar Reserva"}
                 </button>
 
-                <MercadoPagoCheckout
-                  room={room}
-                  bookingContext={bookingContext}
-                  guest={guest}
-                  total={total}
-                  couponCode={appliedCoupon}
-                  onClose={onClose}
-                />
+                {resultMessage && (
+                  <p
+                    className={`text-sm font-medium text-center ${
+                      submitError ? "text-red-500" : "text-[var(--color-success)]"
+                    }`}
+                  >
+                    {resultMessage}
+                  </p>
+                )}
               </div>
             )}
           </form>
