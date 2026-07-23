@@ -1,4 +1,4 @@
-import { Instagram, Facebook, Linkedin, Mail, Phone } from "lucide-react";
+import { Instagram, Facebook, Mail, Phone } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -89,6 +89,7 @@ export default function Footer() {
             <div className="flex gap-3 text-[var(--color-text-muted)]">
               <a
                 target="_blank"
+                rel="noopener noreferrer"
                 href="https://www.instagram.com/pousadavivamar/?hl=en"
                 aria-label="Instagram"
                 className="p-2 rounded-md hover:bg-[var(--color-surface-offset)] hover:text-[var(--color-text)]"
@@ -96,18 +97,13 @@ export default function Footer() {
                 <Instagram size={16} />
               </a>
               <a
-                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                href="https://www.facebook.com/share/1KzXXM64uZ/?mibextid=wwXIfr"
                 aria-label="Facebook"
                 className="p-2 rounded-md hover:bg-[var(--color-surface-offset)] hover:text-[var(--color-text)]"
               >
                 <Facebook size={16} />
-              </a>
-              <a
-                href="#"
-                aria-label="LinkedIn"
-                className="p-2 rounded-md hover:bg-[var(--color-surface-offset)] hover:text-[var(--color-text)]"
-              >
-                <Linkedin size={16} />
               </a>
             </div>
           </div>
