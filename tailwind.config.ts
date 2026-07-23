@@ -61,6 +61,16 @@ const config: Config = {
         'modal': '0 8px 32px oklch(0.2 0.01 80 / 0.18)',
         'header': '0 1px 0 oklch(0.35 0.01 80 / 0.08)',
       },
+      keyframes: {
+        'chat-pop': {
+          '0%': { opacity: '0', transform: 'translateY(16px) scale(0.85)' },
+          '60%': { opacity: '1', transform: 'translateY(-4px) scale(1.03)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+      },
+      animation: {
+        'chat-pop': 'chat-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+      },
     },
   },
   plugins: [],
