@@ -63,7 +63,15 @@ export default function Footer() {
               style={{ fontSize: "var(--text-sm)" }}
             >
               <li className="flex items-center gap-2">
-                <Phone size={14} /> +55 48 4002-8922
+                <Phone size={14} />
+                <a
+                  href="https://wa.me/5522992027273"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[var(--color-text)]"
+                >
+                  (22) 99202-7273
+                </a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail size={14} /> reservas@vivamar.com.br

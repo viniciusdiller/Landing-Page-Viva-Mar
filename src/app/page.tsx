@@ -7,6 +7,7 @@ import RoomsSection from "@/components/RoomsSection";
 import LeisureSection from "@/components/LeisureSection";
 import Footer from "@/components/Footer";
 import CheckoutModal from "@/components/CheckoutModal";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import type { RoomSearchParams, RoomType } from "@/types";
 import Map from "@/components/Map";
 
@@ -56,6 +57,7 @@ export default function LandingPage() {
       <LeisureSection />
       <Map />
       <Footer />
+      <WhatsAppButton />
 
       <CheckoutModal
         open={isCheckoutOpen}

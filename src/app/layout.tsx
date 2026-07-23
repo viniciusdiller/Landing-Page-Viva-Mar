@@ -28,13 +28,13 @@ export const metadata: Metadata = {
     url: siteUrl,
     locale: "pt_BR",
     siteName: "Pousada Viva Mar",
-    images: [{ url: "/Logo-Viva-Mar.jpeg" }],
+    images: [{ url: "/vivamar.png" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Pousada Viva Mar",
     description: "Acorde com o oceano à sua frente. Reserve agora.",
-    images: ["/Logo-Viva-Mar.jpeg"],
+    images: ["/vivamar.png"],
   },
 };
 
@@ -57,6 +57,7 @@ const structuredData = {
     latitude: -22.931874738769693,
     longitude: -42.576149223932745,
   },
+  telephone: "+55 22 99202-7273",
   url: siteUrl,
 };
 

@@ -1,13 +1,57 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import SearchWidget from "./SearchWidget";
 import type { RoomSearchParams } from "@/types";
+import { fetchPublicRooms } from "@/lib/api/rooms";
+
+const MAIN_IMAGE = "/vivamar.png";
+const SLIDE_INTERVAL_MS = 6000;
+const MAX_PHOTOS = 8;
 
 interface HeroProps {
   onSearch: (params: RoomSearchParams) => void;
 }
 
 export default function Hero({ onSearch }: HeroProps) {
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchPublicRooms({})
+      .then((rooms) => {
+        if (cancelled) return;
+        const uniquePhotos = Array.from(
+          new Set(rooms.flatMap((room) => room.photoUrls).filter(Boolean)),
+        ).slice(0, MAX_PHOTOS);
+        setPhotos(uniquePhotos);
+      })
+      .catch(() => {
+        if (!cancelled) setPhotos([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (photos.length < 2) return;
+
+    const interval = setInterval(() => {
+      setActiveIndex((current) => (current + 1) % photos.length);
+    }, SLIDE_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [photos.length]);
+
+  const backgroundImages = [
+    MAIN_IMAGE,
+    ...photos.filter((photo) => photo !== MAIN_IMAGE),
+  ];
+
   return (
     <section
       id="hero"
@@ -15,11 +59,17 @@ export default function Hero({ onSearch }: HeroProps) {
       aria-label="Apresentação da Pousada Viva Mar em Saquarema"
     >
       <div className="absolute inset-0">
-        <img
-          src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=2100&q=80"
-          alt="Mesa de restaurante sofisticado com pratos e ambientação premium"
-          className="w-full h-full object-cover object-center"
-        />
+        {backgroundImages.map((src, index) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            aria-hidden="true"
+            className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-1000 ${
+              index === activeIndex ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        ))}
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/58" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(25,63,221,0.22),transparent_50%)]" />
       </div>
