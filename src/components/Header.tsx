@@ -56,7 +56,7 @@ export default function Header() {
 
           <div className="flex items-center gap-3">
             <a
-              href="#hero"
+              href="#quartos"
               className="hidden md:inline-flex h-10 px-5 items-center justify-center font-semibold tracking-wide text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition-colors"
             >
               RESERVAR
@@ -89,8 +89,9 @@ export default function Header() {
               </a>
             ))}
             <a
-              href="#hero"
+              href="#quartos"
               className="mt-2 h-11 inline-flex items-center justify-center rounded-md text-white font-semibold bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]"
+              onClick={() => setMenuOpen(false)}
             >
               RESERVAR
             </a>

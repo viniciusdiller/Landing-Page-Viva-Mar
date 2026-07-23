@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Pousada Viva Mar",
   description:
     "Reserve sua estadia na Pousada Viva Mar em Saquarema/RJ com vista para o mar, café da manhã panorâmico e booking online.",
@@ -12,6 +15,9 @@ export const metadata: Metadata = {
     "reserva online",
     "hotel saquarema rj",
   ],
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/favicon.ico",
   },
@@ -19,7 +25,39 @@ export const metadata: Metadata = {
     title: "Pousada Viva Mar",
     description: "Acorde com o oceano à sua frente. Reserve agora.",
     type: "website",
+    url: siteUrl,
+    locale: "pt_BR",
+    siteName: "Pousada Viva Mar",
+    images: [{ url: "/Logo-Viva-Mar.jpeg" }],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pousada Viva Mar",
+    description: "Acorde com o oceano à sua frente. Reserve agora.",
+    images: ["/Logo-Viva-Mar.jpeg"],
+  },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "LodgingBusiness",
+  name: "Pousada Viva Mar",
+  description:
+    "Pousada em Saquarema/RJ com vista para o mar, café da manhã panorâmico e reserva online.",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Av. Min. Salgado Filho, 8484 - Barra Nova",
+    addressLocality: "Saquarema",
+    addressRegion: "RJ",
+    postalCode: "28990-000",
+    addressCountry: "BR",
+  },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: -22.931874738769693,
+    longitude: -42.576149223932745,
+  },
+  url: siteUrl,
 };
 
 export default function RootLayout({
@@ -35,6 +73,10 @@ export default function RootLayout({
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
       <body className="antialiased">{children}</body>

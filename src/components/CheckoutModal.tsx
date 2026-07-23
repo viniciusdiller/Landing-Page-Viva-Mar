@@ -520,7 +520,7 @@ export default function CheckoutModal({
                   />
                   <div className="flex flex-col gap-1">
                     <span className="text-[11px] uppercase tracking-widest font-bold text-vm-teal-900">
-                      Reserva Confirmada para o Período
+                      Período Selecionado
                     </span>
                     <p className="text-xs text-vm-teal-800 leading-relaxed">
                       {formatDateBR(bookingContext.checkIn)} até{" "}
