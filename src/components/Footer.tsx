@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer
       id="footer"
-      className="section-sm border-t border-[var(--color-border)] bg-[#f7f5f0]"
+      className="section-sm border-t border-[var(--color-border)] bg-[var(--color-surface-2)]"
     >
       <div className="container-wide">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">

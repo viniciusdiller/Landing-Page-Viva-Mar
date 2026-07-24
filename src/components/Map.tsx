@@ -2,9 +2,9 @@
 
 export default function Map() {
   return (
-    <div className="bg-white">
+    <div id="mapa" className="bg-[var(--color-surface)] pt-16 md:pt-20">
       <h2
-        className="text-center text-[#2f3134] uppercase mb-12 md:mb-16"
+        className="text-center text-[var(--color-text)] uppercase mb-12 md:mb-16"
         style={{
           fontSize: "clamp(1.25rem, 2vw, 2.1rem)",
           letterSpacing: "0.36em",

@@ -37,7 +37,7 @@ export default function LeisureSection() {
   return (
     <section
       id="lazer"
-      className="py-20 md:py-32 bg-white"
+      className="py-20 md:py-32 bg-[var(--color-surface)]"
       aria-labelledby="lazer-heading"
     >
       <div className="container-wide max-w-[90rem] mx-auto px-4 md:px-8">
@@ -45,7 +45,7 @@ export default function LeisureSection() {
         <div className="text-center mb-16 md:mb-24">
           <h2
             id="lazer-heading"
-            className="text-[#2f3134] uppercase mb-4"
+            className="text-[var(--color-text)] uppercase mb-4"
             style={{
               fontSize: "clamp(1.25rem, 2vw, 2.1rem)",
               letterSpacing: "0.36em",
@@ -55,7 +55,7 @@ export default function LeisureSection() {
           >
             Lazer & Infraestrutura
           </h2>
-          <p className="text-gray-500 text-xs md:text-sm tracking-[0.2em] uppercase">
+          <p className="text-[var(--color-text-muted)] text-xs md:text-sm tracking-[0.2em] uppercase">
             Estrutura completa para dias memoráveis
           </p>
         </div>
@@ -65,23 +65,23 @@ export default function LeisureSection() {
           {LEISURE_ITEMS.map(({ icon: Icon, title, description }) => (
             <article
               key={title}
-              className="group border-t border-gray-200 pt-6 transition-colors hover:border-black"
+              className="group border-t border-[var(--color-border)] pt-6 transition-colors hover:border-[var(--color-primary)]"
             >
               {/* Ícone com traço fino */}
               <Icon
                 size={28}
                 strokeWidth={1.2}
-                className="text-black mb-6 transform transition-transform duration-500 group-hover:-translate-y-1"
+                className="text-[var(--color-primary)] mb-6 transform transition-transform duration-500 group-hover:-translate-y-1"
                 aria-hidden="true"
               />
 
               {/* Título com espaçamento de letras */}
-              <h3 className="text-black uppercase text-xs tracking-[0.2em] font-semibold mb-3">
+              <h3 className="text-[var(--color-text)] uppercase text-xs tracking-[0.2em] font-semibold mb-3">
                 {title}
               </h3>
 
               {/* Descrição em tom suave */}
-              <p className="text-gray-500 text-sm leading-relaxed">
+              <p className="text-[var(--color-text-muted)] text-sm leading-relaxed">
                 {description}
               </p>
             </article>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import WelcomeIntro from "@/components/WelcomeIntro";
 import RoomsSection from "@/components/RoomsSection";
 import LeisureSection from "@/components/LeisureSection";
 import Footer from "@/components/Footer";
@@ -53,6 +54,7 @@ export default function LandingPage() {
     <main className="bg-[var(--color-bg)] text-[var(--color-text)]">
       <Header />
       <Hero onSearch={handleSearch} />
+      <WelcomeIntro />
       <RoomsSection searchParams={searchParams} onBook={handleOpenCheckout} />
       <LeisureSection />
       <Map />
