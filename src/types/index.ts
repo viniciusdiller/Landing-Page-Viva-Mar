@@ -33,6 +33,20 @@ export interface FetchPublicRoomsParams {
   checkOut?: string;
 }
 
+// --- GALERIA DE FOTOS DA POUSADA ---
+export interface PublicGalleryPhotoApiItem {
+  id: number;
+  url: string;
+  caption: string | null;
+  sortOrder: number;
+}
+
+export interface GalleryPhoto {
+  id: number;
+  url: string;
+  caption: string | null;
+}
+
 export interface RoomType {
   // ID usado na API Channex: property_id + room_type_id
   id: string; // channex room_type_id

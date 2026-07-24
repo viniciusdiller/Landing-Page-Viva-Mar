@@ -6,6 +6,7 @@ import Hero from "@/components/Hero";
 import WelcomeIntro from "@/components/WelcomeIntro";
 import RoomsSection from "@/components/RoomsSection";
 import LeisureSection from "@/components/LeisureSection";
+import Gallery from "@/components/Gallery";
 import Footer from "@/components/Footer";
 import CheckoutModal from "@/components/CheckoutModal";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -57,6 +58,7 @@ export default function LandingPage() {
       <WelcomeIntro />
       <RoomsSection searchParams={searchParams} onBook={handleOpenCheckout} />
       <LeisureSection />
+      <Gallery />
       <Map />
       <Footer />
       <WhatsAppButton />

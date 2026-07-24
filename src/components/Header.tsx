@@ -50,7 +50,7 @@ export default function Header() {
     { label: "A Pousada", href: "#hero" },
     { label: "Acomodações", href: "#quartos" },
     { label: "Estrutura", href: "#lazer" },
-    { label: "Galeria", href: "#quartos" },
+    { label: "Galeria", href: "#galeria" },
     { label: "Localização", href: "#mapa" },
     { label: "Contato", href: "#footer" },
   ];
