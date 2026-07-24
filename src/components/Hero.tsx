@@ -6,7 +6,7 @@ import SearchWidget from "./SearchWidget";
 import type { RoomSearchParams } from "@/types";
 import { fetchPublicRooms } from "@/lib/api/rooms";
 
-const MAIN_IMAGE = "/vivamar.png";
+const MAIN_IMAGE = "/vivamarhd.png";
 const SLIDE_INTERVAL_MS = 6000;
 const MAX_PHOTOS = 8;
 
