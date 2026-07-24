@@ -28,13 +28,13 @@ export const metadata: Metadata = {
     url: siteUrl,
     locale: "pt_BR",
     siteName: "Pousada Viva Mar",
-    images: [{ url: "/vivamar.png" }],
+    images: [{ url: "/vivamarhd.jpeg" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Pousada Viva Mar",
     description: "Acorde com o oceano à sua frente. Reserve agora.",
-    images: ["/vivamar.png"],
+    images: ["/vivamarhd.jpeg"],
   },
 };
 
