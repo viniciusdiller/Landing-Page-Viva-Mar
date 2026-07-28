@@ -101,6 +101,19 @@ export interface BookingFormData {
   guest: GuestData;
 }
 
+// --- CRIAÇÃO DE SESSÃO DE CHECKOUT (Mercado Pago) ---
+// Enviado para POST /api/checkout/create-preference. É o BookingFormData
+// mais os dados que só existem no front (nome do quarto, datas em contexto)
+// e que precisam aparecer no Checkout Pro e ser reaproveitados pelo webhook
+// para criar a reserva de verdade após o pagamento ser aprovado.
+export interface CheckoutSessionRequest extends BookingFormData {
+  roomName: string;
+}
+
+export interface CheckoutSessionResponse {
+  initPoint: string;
+}
+
 // --- STATUS DO PAGAMENTO ---
 export type PaymentStatus =
   | "pending"
@@ -146,34 +159,6 @@ export interface CreateBookingPayload {
   createdAt: string; // ISO timestamp
 }
 
-// --- RESPOSTA DA API INTERNA ---
-export interface BookingResponse {
-  success: boolean;
-  bookingId: string; // ID interno do SaaS
-  channexBookingId?: string; // ID no Channex (após sync)
-  status: "confirmed" | "pending_payment" | "failed";
-  message: string;
-}
-
-// --- WEBHOOK MERCADO PAGO ---
-// Recebido em POST /api/webhooks/mercadopago
-export interface MercadoPagoWebhookPayload {
-  id: number;
-  live_mode: boolean;
-  type:
-    | "payment"
-    | "plan"
-    | "subscription"
-    | "invoice"
-    | "point_integration_wh";
-  date_created: string;
-  user_id: number;
-  api_version: string;
-  action: "payment.created" | "payment.updated";
-  data: {
-    id: string; // payment_id do Mercado Pago
-  };
-}
 
 // --- PACOTES / ADICIONAIS ---
 export interface Package {

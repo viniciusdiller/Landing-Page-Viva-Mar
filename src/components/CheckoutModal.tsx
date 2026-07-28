@@ -10,11 +10,18 @@ import {
   AlertCircle,
   Gift,
 } from "lucide-react";
-import { formatBRL, submitReservation } from "@/lib/booking";
+import { formatBRL, calcNights } from "@/lib/booking";
 import { fetchPackages, calculatePackagesTotal } from "@/lib/api/packages";
+import { createCheckoutSession } from "@/lib/api/checkout";
 import RoomPhotoCarousel from "@/components/RoomPhotoCarousel";
 
-import type { BookingFormData, GuestData, RoomType, Package, SelectedPackage } from "@/types";
+import type {
+  CheckoutSessionRequest,
+  GuestData,
+  RoomType,
+  Package,
+  SelectedPackage,
+} from "@/types";
 
 interface CheckoutModalProps {
   open: boolean;
@@ -62,8 +69,9 @@ export default function CheckoutModal({
   const [submitting, setSubmitting] = useState(false);
   const [resultMessage, setResultMessage] = useState("");
   const [submitError, setSubmitError] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [guestsCount, setGuestsCount] = useState(bookingContext.guests);
+  const [checkIn, setCheckIn] = useState(bookingContext.checkIn);
+  const [checkOut, setCheckOut] = useState(bookingContext.checkOut);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [packages, setPackages] = useState<Package[]>([]);
   const [selectedPackages, setSelectedPackages] = useState<Map<string, number>>(
@@ -77,8 +85,9 @@ export default function CheckoutModal({
       document.body.style.overflow = "hidden";
       setResultMessage("");
       setSubmitError(false);
-      setSubmitSuccess(false);
       setGuestsCount(bookingContext.guests);
+      setCheckIn(bookingContext.checkIn);
+      setCheckOut(bookingContext.checkOut);
       // Carregar pacotes quando o modal abre
       setLoadingPackages(true);
       fetchPackages()
@@ -100,10 +109,13 @@ export default function CheckoutModal({
     };
   }, [open]);
 
+  const nights = useMemo(() => calcNights(checkIn, checkOut), [checkIn, checkOut]);
+  const hasDateError = Boolean(checkIn && checkOut) && nights <= 0;
+
   const subtotal = useMemo(() => {
     if (!room) return 0;
-    return room.pricePerNight * Math.max(1, bookingContext.nights);
-  }, [room, bookingContext.nights]);
+    return room.pricePerNight * Math.max(1, nights);
+  }, [room, nights]);
 
   const packagesTotal = useMemo(() => {
     return calculatePackagesTotal(
@@ -201,13 +213,14 @@ export default function CheckoutModal({
       };
     });
 
-    const formData: BookingFormData = {
+    const checkoutRequest: CheckoutSessionRequest = {
       roomId: room.id,
+      roomName: room.name,
       propertyId: room.propertyId,
-      checkIn: bookingContext.checkIn,
-      checkOut: bookingContext.checkOut,
+      checkIn,
+      checkOut,
       guests: guestsCount,
-      nights: Math.max(1, bookingContext.nights),
+      nights: Math.max(1, nights),
       pricePerNight: room.pricePerNight,
       subtotal,
       discountCode: appliedCoupon,
@@ -222,15 +235,16 @@ export default function CheckoutModal({
     setResultMessage("");
 
     try {
-      const response = await submitReservation(formData);
-      setResultMessage(response.message);
-      setSubmitError(false);
-      setSubmitSuccess(true);
+      const { initPoint } = await createCheckoutSession(checkoutRequest);
+      // Sai do site e vai para o checkout hospedado do Mercado Pago — a
+      // reserva só é criada de fato depois que o pagamento é aprovado lá
+      // (ver o webhook em src/app/api/webhooks/mercadopago/route.ts).
+      window.location.href = initPoint;
     } catch (error) {
       setResultMessage(
         error instanceof Error
           ? error.message
-          : "Falha ao criar a reserva. Tente novamente.",
+          : "Falha ao iniciar o pagamento. Tente novamente.",
       );
       setSubmitError(true);
     } finally {
@@ -241,7 +255,8 @@ export default function CheckoutModal({
   const inputClassName =
     "w-full border-0 border-b border-gray-300 py-2.5 px-0 focus:ring-0 focus:border-black bg-transparent text-[15px] transition-colors outline-none placeholder:text-gray-400";
 
-  const hasDates = Boolean(bookingContext.checkIn && bookingContext.checkOut);
+  const todayISO = new Date().toISOString().split("T")[0];
+  const hasDates = Boolean(checkIn && checkOut) && !hasDateError;
   const exceedsCapacity = room ? guestsCount > room.capacity : false;
   const isFull = room ? (room as any).remainingQuantity <= 0 : false;
 
@@ -311,15 +326,52 @@ export default function CheckoutModal({
                 ))}
               </div>
             )}
-            <p className="text-gray-500 text-xs tracking-wider uppercase mb-4 leading-relaxed">
-              {bookingContext.checkIn
-                ? formatDateBR(bookingContext.checkIn)
-                : "Selecione"}{" "}
-              →{" "}
-              {bookingContext.checkOut
-                ? formatDateBR(bookingContext.checkOut)
-                : "Selecione"}
-            </p>
+            <div className="mb-4">
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-[10px] tracking-widest uppercase text-gray-500">
+                    Check-in
+                  </span>
+                  <input
+                    type="date"
+                    min={todayISO}
+                    value={checkIn}
+                    onChange={(e) => setCheckIn(e.target.value)}
+                    className="mt-1 w-full border-0 border-b border-gray-300 bg-transparent py-1.5 text-sm font-semibold text-gray-900 outline-none focus:border-black cursor-pointer"
+                    aria-invalid={hasDateError}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] tracking-widest uppercase text-gray-500">
+                    Check-out
+                  </span>
+                  <input
+                    type="date"
+                    min={checkIn || todayISO}
+                    value={checkOut}
+                    onChange={(e) => setCheckOut(e.target.value)}
+                    className={`mt-1 w-full border-0 border-b bg-transparent py-1.5 text-sm font-semibold outline-none cursor-pointer ${
+                      hasDateError
+                        ? "border-red-400 text-red-600"
+                        : "border-gray-300 text-gray-900 focus:border-black"
+                    }`}
+                    aria-invalid={hasDateError}
+                  />
+                </label>
+              </div>
+              {hasDateError ? (
+                <p className="mt-2 text-xs text-red-500">
+                  O check-out deve ser depois do check-in.
+                </p>
+              ) : (
+                checkIn &&
+                checkOut && (
+                  <p className="mt-2 text-xs text-gray-500 uppercase tracking-wider">
+                    {nights} {nights === 1 ? "noite" : "noites"}
+                  </p>
+                )
+              )}
+            </div>
             <div className="mb-8 flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <button
@@ -480,7 +532,7 @@ export default function CheckoutModal({
                 Informações de Reserva
               </h4>
 
-              {!hasDates ? (
+              {!checkIn || !checkOut ? (
                 <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-lg mb-8 flex items-start gap-3">
                   <Calendar
                     className="text-amber-600 mt-0.5"
@@ -493,8 +545,25 @@ export default function CheckoutModal({
                     </span>
                     <p className="text-xs text-amber-800 leading-relaxed">
                       Para prosseguir, selecione as datas de{" "}
-                      <strong>Check-in</strong> e <strong>Check-out</strong> no
-                      buscador e clique em <strong>BUSCAR</strong>.
+                      <strong>Check-in</strong> e <strong>Check-out</strong> ao
+                      lado, no resumo do quarto.
+                    </p>
+                  </div>
+                </div>
+              ) : hasDateError ? (
+                <div className="bg-red-50/50 border border-red-100 p-4 rounded-lg mb-8 flex items-start gap-3">
+                  <AlertCircle
+                    className="text-red-600 mt-0.5"
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] uppercase tracking-widest font-bold text-red-900">
+                      Datas inválidas
+                    </span>
+                    <p className="text-xs text-red-800 leading-relaxed">
+                      O check-out deve ser depois do check-in. Ajuste as datas
+                      no resumo do quarto.
                     </p>
                   </div>
                 </div>
@@ -528,10 +597,10 @@ export default function CheckoutModal({
                       Período Selecionado
                     </span>
                     <p className="text-xs text-vm-teal-800 leading-relaxed">
-                      {formatDateBR(bookingContext.checkIn)} até{" "}
-                      {formatDateBR(bookingContext.checkOut)}
+                      {formatDateBR(checkIn)} até{" "}
+                      {formatDateBR(checkOut)}
                       <span className="mx-2 opacity-50">•</span>
-                      {bookingContext.nights} noites para{" "}
+                      {nights} noites para{" "}
                       {guestsCount} hóspedes.
                     </p>
                   </div>
@@ -595,16 +664,12 @@ export default function CheckoutModal({
                 <button
                   type="submit"
                   className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] text-xs font-semibold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 disabled:opacity-60"
-                  disabled={submitting || submitSuccess}
+                  disabled={submitting}
                 >
                   {submitting ? (
                     <Loader2 size={16} className="animate-spin" />
                   ) : null}
-                  {submitting
-                    ? "Processando..."
-                    : submitSuccess
-                      ? "Reserva Confirmada"
-                      : "Confirmar Reserva"}
+                  {submitting ? "Redirecionando..." : "Ir para pagamento"}
                 </button>
 
                 {resultMessage && (
