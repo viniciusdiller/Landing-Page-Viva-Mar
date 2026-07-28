@@ -13,6 +13,7 @@ const MAX_PHOTOS = 8;
 const FEATURES = [
   { icon: Sun, title: "Pé na areia", description: "A poucos passos do mar" },
   { icon: Waves, title: "2 piscinas", description: "Adulto e infantil com vista" },
+  { icon: Waves, title: "Sauna", description: "Adulta" },
   { icon: Coffee, title: "Café da manhã", description: "Completo e com vista para o mar" },
   { icon: Wifi, title: "Wi-Fi", description: "Internet de alta velocidade" },
   { icon: Car, title: "Estacionamento", description: "Privativo e gratuito" },
@@ -129,7 +130,7 @@ export default function Hero({ onSearch }: HeroProps) {
         </div>
 
         <div className="container-wide pb-10 md:pb-14 -mt-6 md:-mt-8">
-          <div className="grid grid-cols-2 md:grid-cols-5 divide-x divide-y md:divide-y-0 divide-white/15 border border-white/15">
+          <div className="grid grid-cols-2 md:grid-cols-6 divide-x divide-y md:divide-y-0 divide-white/15 border border-white/15">
             {FEATURES.map(({ icon: Icon, title, description }) => (
               <div
                 key={title}

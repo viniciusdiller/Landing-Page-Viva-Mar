@@ -1,14 +1,59 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { ChevronLeft, ChevronRight, X, Images } from "lucide-react";
 import { fetchPublicGallery } from "@/lib/api/gallery";
 import type { GalleryPhoto } from "@/types";
+
+const PHOTOS_PER_PAGE = 8;
+const PAGE_ROTATE_INTERVAL_MS = 5000;
+const PAGE_FADE_MS = 400;
 
 export default function Gallery() {
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activePage, setActivePage] = useState(0);
+  const [displayPage, setDisplayPage] = useState(0);
+  const [isFading, setIsFading] = useState(false);
+
+  const pages = useMemo(() => {
+    const chunks: GalleryPhoto[][] = [];
+    for (let i = 0; i < photos.length; i += PHOTOS_PER_PAGE) {
+      chunks.push(photos.slice(i, i + PHOTOS_PER_PAGE));
+    }
+    return chunks;
+  }, [photos]);
+
+  useEffect(() => {
+    setActivePage((current) => (current < pages.length ? current : 0));
+    setDisplayPage((current) => (current < pages.length ? current : 0));
+  }, [pages.length]);
+
+  useEffect(() => {
+    if (pages.length < 2) return;
+
+    const interval = setInterval(() => {
+      setActivePage((current) => (current + 1) % pages.length);
+    }, PAGE_ROTATE_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [pages.length]);
+
+  // Faz o crossfade: some com a página atual e só troca o conteúdo
+  // (displayPage) quando já está invisível, evitando o corte seco de troca
+  // instantânea de fotos.
+  useEffect(() => {
+    if (activePage === displayPage) return;
+
+    setIsFading(true);
+    const timeout = setTimeout(() => {
+      setDisplayPage(activePage);
+      setIsFading(false);
+    }, PAGE_FADE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [activePage, displayPage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,25 +140,59 @@ export default function Gallery() {
             <span className="text-sm uppercase tracking-[0.2em]">Carregando fotos...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
-            {photos.map((photo, index) => (
-              <button
-                key={photo.id}
-                type="button"
-                onClick={() => setActiveIndex(index)}
-                className="group relative aspect-square overflow-hidden bg-[var(--color-surface-2)]"
-                aria-label={photo.caption || `Ampliar foto ${index + 1} da galeria`}
+          <>
+            <div
+              className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 transition-opacity ease-in-out ${
+                isFading ? "opacity-0" : "opacity-100"
+              }`}
+              style={{ transitionDuration: `${PAGE_FADE_MS}ms` }}
+            >
+              {(pages[displayPage] ?? []).map((photo, localIndex) => {
+                const globalIndex = displayPage * PHOTOS_PER_PAGE + localIndex;
+                return (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => setActiveIndex(globalIndex)}
+                    className="group relative aspect-square overflow-hidden bg-[var(--color-surface-2)]"
+                    aria-label={photo.caption || `Ampliar foto ${globalIndex + 1} da galeria`}
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || "Foto da Pousada Viva Mar"}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/15" />
+                  </button>
+                );
+              })}
+            </div>
+
+            {pages.length > 1 && (
+              <div
+                className="mt-8 flex items-center justify-center gap-2.5"
+                role="tablist"
+                aria-label="Páginas da galeria"
               >
-                <img
-                  src={photo.url}
-                  alt={photo.caption || "Foto da Pousada Viva Mar"}
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/15" />
-              </button>
-            ))}
-          </div>
+                {pages.map((_, pageIndex) => (
+                  <button
+                    key={pageIndex}
+                    type="button"
+                    role="tab"
+                    aria-selected={pageIndex === activePage}
+                    aria-label={`Ver página ${pageIndex + 1} da galeria`}
+                    onClick={() => setActivePage(pageIndex)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      pageIndex === activePage
+                        ? "w-6 bg-[var(--color-primary)]"
+                        : "w-2 bg-[var(--color-border)] hover:bg-[var(--color-text-muted)]"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
