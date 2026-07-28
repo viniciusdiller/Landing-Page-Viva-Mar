@@ -184,6 +184,13 @@ export interface Package {
   icon?: string; // nome do ícone Lucide
 }
 
+export interface PublicAddonApiItem {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+}
+
 // --- COUPON / DESCONTO ---
 export interface DiscountCoupon {
   code: string;

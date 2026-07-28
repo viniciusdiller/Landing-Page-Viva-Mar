@@ -107,12 +107,13 @@ export default function CheckoutModal({
 
   const packagesTotal = useMemo(() => {
     return calculatePackagesTotal(
+      packages,
       Array.from(selectedPackages.entries()).map(([id, quantity]) => ({
         id,
         quantity,
       })),
     );
-  }, [selectedPackages]);
+  }, [packages, selectedPackages]);
 
   const total = Math.max(0, subtotal + packagesTotal - discountAmount);
   const selectedPackagesCount = Array.from(selectedPackages.values()).reduce(
