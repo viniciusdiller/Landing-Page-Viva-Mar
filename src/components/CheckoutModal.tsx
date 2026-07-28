@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { formatBRL, submitReservation } from "@/lib/booking";
 import { fetchPackages, calculatePackagesTotal } from "@/lib/api/packages";
+import RoomPhotoCarousel from "@/components/RoomPhotoCarousel";
 
 import type { BookingFormData, GuestData, RoomType, Package, SelectedPackage } from "@/types";
 
@@ -275,15 +276,18 @@ export default function CheckoutModal({
           </button>
         </div>
 
+        {/* Foto do quarto em destaque, ocupando a largura toda do modal */}
+        <RoomPhotoCarousel
+          images={room.images}
+          alt={room.name}
+          sizeClassName="h-48 sm:h-64 md:h-72"
+          className="shrink-0"
+        />
+
         {/* Corpo do Modal - Grid 2 colunas */}
         <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
           {/* Lado Esquerdo - Resumo do Quarto */}
           <aside className="lg:w-2/5 bg-[#ececec] p-6 lg:p-8 flex flex-col border-r border-gray-200 lg:overflow-y-auto">
-            <img
-              src={room.images[0]}
-              alt={room.name}
-              className="w-full aspect-[4/3] object-cover mb-6 shadow-sm grayscale-[10%]"
-            />
             <h4
               style={{ fontFamily: "var(--font-display)" }}
               className="text-2xl font-semibold mb-2 text-gray-900"
