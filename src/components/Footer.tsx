@@ -74,7 +74,7 @@ export default function Footer() {
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={14} /> reservas@vivamar.com.br
+                <Mail size={14} /> atendimento@vivamarpousada.com.br
               </li>
             </ul>
           </div>

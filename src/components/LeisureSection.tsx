@@ -24,7 +24,7 @@ const LEISURE_ITEMS = [
   {
     icon: Gamepad2,
     title: "Salão de jogos e parque",
-    description: "Lazer para adultos e crianças com pula-pula e jogos.",
+    description: "Lazer para adultos e crianças com sinuca e outros jogos.",
   },
   {
     icon: Trees,
