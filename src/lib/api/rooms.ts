@@ -199,6 +199,7 @@ function toRoomType(
     capacity: room.maxGuests,
     minStayNights: room.minStayNights,
     minStayDays: room.minStayDays,
+    beds: Array.isArray(room.beds) ? room.beds : [],
   };
 }
 

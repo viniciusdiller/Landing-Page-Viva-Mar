@@ -1,32 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { calcNights } from "@/lib/booking";
 import { fetchPublicRooms } from "@/lib/api/rooms";
 import type { RoomSearchParams, RoomType } from "@/types";
 import RoomCard from "./RoomCard";
 
 interface RoomListProps {
   searchParams?: RoomSearchParams;
-  onBook: (
-    room: RoomType,
-    nights: number,
-    checkIn: string,
-    checkOut: string,
-    guests: number,
-  ) => void;
 }
 
-export default function RoomList({ searchParams, onBook }: RoomListProps) {
+function buildRoomDetailHref(room: RoomType, searchParams?: RoomSearchParams) {
+  const query = new URLSearchParams();
+  if (searchParams?.checkIn) query.set("checkIn", searchParams.checkIn);
+  if (searchParams?.checkOut) query.set("checkOut", searchParams.checkOut);
+  if (searchParams?.guests) query.set("guests", String(searchParams.guests));
+
+  const queryString = query.toString();
+  return `/quartos/${encodeURIComponent(room.id)}${queryString ? `?${queryString}` : ""}`;
+}
+
+export default function RoomList({ searchParams }: RoomListProps) {
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const nights = calcNights(
-    searchParams?.checkIn ?? "",
-    searchParams?.checkOut ?? "",
-  );
-  const hasDates = Boolean(searchParams?.checkIn && searchParams?.checkOut);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,16 +110,7 @@ export default function RoomList({ searchParams, onBook }: RoomListProps) {
             <RoomCard
               key={room.id}
               room={room}
-              hasDates={hasDates}
-              onBook={(selectedRoom) =>
-                onBook(
-                  selectedRoom,
-                  nights || 1,
-                  searchParams?.checkIn ?? "",
-                  searchParams?.checkOut ?? "",
-                  searchParams?.guests ?? 1,
-                )
-              }
+              detailHref={buildRoomDetailHref(room, searchParams)}
             />
           ))}
         </div>

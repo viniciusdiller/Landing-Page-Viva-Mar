@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Payment } from "@mercadopago/sdk-react";
 import {
   X,
@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/checkout";
 import { ensureMercadoPagoInitialized } from "@/lib/mercadopago-client";
 import { fetchAddressByCep } from "@/lib/api/cep";
+import RoomPhotoCarousel from "@/components/RoomPhotoCarousel";
 import { maskCPF, maskCEP, maskPhone } from "@/lib/masks";
 import { BRAZILIAN_STATES } from "@/lib/brazilian-states";
 
@@ -106,6 +107,16 @@ export default function CheckoutModal({
   const [copiedPixCode, setCopiedPixCode] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
+  // Controla só se já TENTAMOS criar a preferência (sucesso ou falha) — usado
+  // pra não deixar o Brick preso pra sempre em "carregando" se essa chamada
+  // falhar ou demorar: cartão e Pix não podem depender da carteira Mercado
+  // Pago, que é só um extra opcional.
+  const [preferenceAttempted, setPreferenceAttempted] = useState(false);
+  // Depois que já desistimos de esperar (timeout) e renderizamos o Brick
+  // sem carteira Mercado Pago, uma resposta atrasada da preferência não pode
+  // mais ser aplicada — trocar o preferenceId nesse ponto remontaria o
+  // Brick já em uso e reproduziria o bug do painel duplicado.
+  const preferenceGivenUpRef = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -223,25 +234,45 @@ export default function CheckoutModal({
       !meetsMinimumStay
     ) {
       setPreferenceId(null);
+      setPreferenceAttempted(false);
+      preferenceGivenUpRef.current = false;
       return;
     }
 
     let cancelled = false;
     setPreferenceId(null);
+    setPreferenceAttempted(false);
+    preferenceGivenUpRef.current = false;
 
     const checkoutRequest = buildCheckoutRequest();
     if (!checkoutRequest) return;
 
+    // Se a criação da preferência travar (rede lenta, servidor fora do ar),
+    // desiste depois de alguns segundos em vez de deixar o cliente esperando
+    // pra sempre pra conseguir pagar com cartão ou Pix.
+    const timeoutId = setTimeout(() => {
+      if (cancelled) return;
+      preferenceGivenUpRef.current = true;
+      setPreferenceAttempted(true);
+    }, 6000);
+
     createCheckoutPreference(checkoutRequest)
       .then((id) => {
-        if (!cancelled) setPreferenceId(id);
+        if (cancelled || preferenceGivenUpRef.current) return;
+        clearTimeout(timeoutId);
+        setPreferenceId(id);
+        setPreferenceAttempted(true);
       })
       .catch((error) => {
         console.error("Erro ao criar preferência do Mercado Pago:", error);
+        if (cancelled || preferenceGivenUpRef.current) return;
+        clearTimeout(timeoutId);
+        setPreferenceAttempted(true);
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -455,17 +486,20 @@ export default function CheckoutModal({
       {/* Cabeçalho */}
       <header className="border-b border-gray-100">
         <div className="max-w-[1180px] mx-auto flex items-center justify-between px-6 lg:px-10 py-6">
-          <p
-            className="text-gray-900 uppercase"
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-900 uppercase hover:opacity-70 transition-opacity"
             style={{
               fontFamily: "var(--font-display)",
               fontSize: "1.1rem",
               fontWeight: 600,
               letterSpacing: "0.04em",
             }}
+            aria-label="Voltar para o site principal"
           >
             Viva Mar
-          </p>
+          </button>
           <button
             className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 transition-colors rounded-full"
             onClick={onClose}
@@ -752,21 +786,21 @@ export default function CheckoutModal({
                         : "Aguardando pagamento... Assim que for identificado, sua reserva é confirmada automaticamente."}
                     </p>
                   </div>
-                ) : guestFieldsComplete && preferenceId ? (
+                ) : guestFieldsComplete && preferenceAttempted ? (
                   <Payment
-                    key={`${total}-${preferenceId}`}
+                    key={`${total}-${preferenceId ?? "no-wallet"}`}
                     initialization={{
                       amount: total,
                       payer: { email: guest.email },
-                      preferenceId,
+                      ...(preferenceId ? { preferenceId } : {}),
                     }}
                     customization={{
                       paymentMethods: {
                         creditCard: "all",
                         debitCard: "all",
                         bankTransfer: "all",
-                        mercadoPago: "all",
                         maxInstallments: 12,
+                        ...(preferenceId ? { mercadoPago: "all" } : {}),
                       },
                     }}
                     onSubmit={handlePaymentSubmit}
@@ -809,11 +843,15 @@ export default function CheckoutModal({
         <aside className="lg:w-[380px] xl:w-[420px] lg:sticky lg:top-0 bg-gray-50 px-6 lg:px-8 py-10 lg:border-l border-gray-100 lg:min-h-screen">
           <div className="flex gap-4 pb-6">
             {roomThumb ? (
-              <img
-                src={roomThumb}
-                alt={room.name}
-                className="w-16 h-16 rounded-md object-cover border border-gray-200 shrink-0"
-              />
+              <div className="w-16 h-16 rounded-md overflow-hidden border border-gray-200 shrink-0">
+                <RoomPhotoCarousel
+                  images={room.images}
+                  alt={room.name}
+                  sizeClassName="h-full"
+                  className="h-full"
+                  showInlineControls={false}
+                />
+              </div>
             ) : (
               <div className="w-16 h-16 rounded-md bg-gray-200 shrink-0" />
             )}

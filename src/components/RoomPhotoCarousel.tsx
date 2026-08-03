@@ -10,6 +10,10 @@ interface RoomPhotoCarouselProps {
   alt: string;
   className?: string;
   sizeClassName?: string;
+  // Em miniaturas pequenas as setas de navegação (36px) cobrem quase toda a
+  // área e "roubam" o clique de abrir o lightbox — nesses casos desativa as
+  // setas/bolinhas inline, deixando o clique inteiro dedicado a ampliar.
+  showInlineControls?: boolean;
 }
 
 export default function RoomPhotoCarousel({
@@ -17,6 +21,7 @@ export default function RoomPhotoCarousel({
   alt,
   className = "",
   sizeClassName = "aspect-[4/3]",
+  showInlineControls = true,
 }: RoomPhotoCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -90,7 +95,7 @@ export default function RoomPhotoCarousel({
           />
         ))}
 
-        {images.length > 1 && (
+        {images.length > 1 && showInlineControls && (
           <>
             <button
               type="button"

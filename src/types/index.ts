@@ -14,6 +14,23 @@ export interface RoomAmenity {
 
 export type RoomStatus = "active" | "maintenance";
 
+export const BED_TYPES = ["casal", "solteiro", "queen", "king", "beliche", "sofa_cama"] as const;
+export type BedType = (typeof BED_TYPES)[number];
+
+export const BED_TYPE_LABELS: Record<BedType, string> = {
+  casal: "Cama de casal",
+  solteiro: "Cama de solteiro",
+  queen: "Cama queen",
+  king: "Cama king",
+  beliche: "Beliche",
+  sofa_cama: "Sofá-cama",
+};
+
+export interface RoomBed {
+  type: BedType;
+  quantity: number;
+}
+
 export interface PublicRoomApiItem {
   id: string;
   channexRoomTypeId: string;
@@ -31,6 +48,7 @@ export interface PublicRoomApiItem {
   // padrão do quarto, ex.: Réveillon).
   minStayNights: number | null;
   minStayDays: number | null;
+  beds: RoomBed[];
 }
 
 export interface FetchPublicRoomsParams {
@@ -74,6 +92,7 @@ export interface RoomType {
   capacity: number; // número de hóspedes que o quarto acomoda
   minStayNights: number | null; // mínimo de noites exigido (null = sem mínimo)
   minStayDays: number | null; // mínimo de dias corridos exigido (null = sem mínimo)
+  beds: RoomBed[]; // composição de camas do quarto
   // Campos extras para UI
   size?: string; // ex: "28 m²"
   bedType?: string; // ex: "Cama King"

@@ -1,13 +1,14 @@
 "use client";
 
-import { BedDouble, CalendarDays, ImageOff, Moon, Users } from "lucide-react";
+import Link from "next/link";
+import { BedDouble, ImageOff, Moon, Users } from "lucide-react";
 import type { RoomType } from "@/types";
+import { BED_TYPE_LABELS } from "@/types";
 import { formatBRL } from "@/lib/booking";
 
 interface RoomCardProps {
   room: RoomType;
-  hasDates: boolean;
-  onBook: (room: RoomType) => void;
+  detailHref: string;
 }
 
 function AvailabilityBadge({ available }: { available: boolean }) {
@@ -18,7 +19,7 @@ function AvailabilityBadge({ available }: { available: boolean }) {
   );
 }
 
-export default function RoomCard({ room, hasDates, onBook }: RoomCardProps) {
+export default function RoomCard({ room, detailHref }: RoomCardProps) {
   const primaryPhoto = room.photoUrls[0] ?? room.images[0] ?? null;
   const ctaLabel = room.available ? "Reservar" : "Consultar";
   const capacityLabel = `${room.maxOccupancy} ${room.maxOccupancy === 1 ? "hospede" : "hospedes"}`;
@@ -44,11 +45,6 @@ export default function RoomCard({ room, hasDates, onBook }: RoomCardProps) {
 
         <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
           <AvailabilityBadge available={room.available} />
-          <span className="rounded-full bg-black/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-            {hasDates
-              ? `${room.remainingQuantity ?? 0} restantes`
-              : `${room.quantity ?? 0} unidades`}
-          </span>
         </div>
       </div>
 
@@ -78,20 +74,16 @@ export default function RoomCard({ room, hasDates, onBook }: RoomCardProps) {
             <Users size={14} aria-hidden="true" />
             Ate {capacityLabel}
           </span>
-          <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
-            <BedDouble size={14} aria-hidden="true" />
-            {room.quantity ?? 0} unidade{room.quantity === 1 ? "" : "s"}
-          </span>
-          {hasDates && (
-            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
-              <CalendarDays size={14} aria-hidden="true" />
-              {room.remainingQuantity ?? 0} disponiveis
-            </span>
-          )}
           {minimumStayNights > 1 && (
             <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
               <Moon size={14} aria-hidden="true" />
               Minimo {minimumStayNights} noites
+            </span>
+          )}
+          {room.beds.length > 0 && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
+              <BedDouble size={14} aria-hidden="true" />
+              {room.beds.map((bed) => `${bed.quantity}x ${BED_TYPE_LABELS[bed.type]}`).join(", ")}
             </span>
           )}
         </div>
@@ -120,13 +112,12 @@ export default function RoomCard({ room, hasDates, onBook }: RoomCardProps) {
               : "Sem disponibilidade no periodo selecionado"}
           </p>
 
-          <button
-            type="button"
+          <Link
+            href={detailHref}
             className={`btn ${room.available ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => onBook(room)}
           >
             {ctaLabel}
-          </button>
+          </Link>
         </div>
       </div>
     </article>

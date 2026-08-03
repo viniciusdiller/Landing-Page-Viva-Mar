@@ -1,23 +1,13 @@
 "use client";
 
-import type { RoomSearchParams, RoomType } from "@/types";
+import type { RoomSearchParams } from "@/types";
 import RoomList from "@/components/rooms/RoomList";
 
 interface RoomsSectionProps {
   searchParams?: RoomSearchParams;
-  onBook: (
-    room: RoomType,
-    nights: number,
-    checkIn: string,
-    checkOut: string,
-    guests: number,
-  ) => void;
 }
 
-export default function RoomsSection({
-  searchParams,
-  onBook,
-}: RoomsSectionProps) {
+export default function RoomsSection({ searchParams }: RoomsSectionProps) {
   return (
     <section
       id="quartos"
@@ -39,7 +29,7 @@ export default function RoomsSection({
             CONHEÇA BEM DE PERTO
           </h2>
 
-          <RoomList searchParams={searchParams} onBook={onBook} />
+          <RoomList searchParams={searchParams} />
         </div>
       </div>
     </section>
