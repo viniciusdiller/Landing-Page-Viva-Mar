@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { createCheckoutPreference } from "@/lib/mercadopago";
-import type { CreatePreferenceRequest } from "@/types";
+import { createPayment } from "@/lib/mercadopago";
+import type { ProcessPaymentRequest } from "@/types";
 
 function getSiteUrl() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -17,7 +17,7 @@ function getSiteUrl() {
 
 export async function POST(request: Request) {
   try {
-    const { booking } = (await request.json()) as CreatePreferenceRequest;
+    const { formData, booking, deviceId } = (await request.json()) as ProcessPaymentRequest;
 
     if (!booking?.roomId || !booking.checkIn || !booking.checkOut || !booking.guest?.email) {
       return NextResponse.json({ error: "Dados de reserva incompletos." }, { status: 400 });
@@ -27,20 +27,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Valor da reserva inválido." }, { status: 400 });
     }
 
+    if (!formData || typeof formData !== "object") {
+      return NextResponse.json({ error: "Dados de pagamento ausentes." }, { status: 400 });
+    }
+
     const siteUrl = getSiteUrl();
     const externalReference = randomUUID();
 
-    const preferenceId = await createCheckoutPreference({
-      items: [
-        {
-          title: `${booking.roomName} — ${booking.nights} noite(s)`,
-          quantity: 1,
-          unitPrice: Number(booking.total.toFixed(2)),
-        },
-      ],
-      payerEmail: booking.guest.email,
+    const payment = await createPayment({
+      formData,
+      transactionAmount: Number(booking.total.toFixed(2)),
+      description: `${booking.roomName} — ${booking.nights} noite(s)`,
       externalReference,
       notificationUrl: `${siteUrl}/api/webhooks/mercadopago`,
+      deviceId,
       metadata: {
         room_id: booking.roomId,
         room_name: booking.roomName,
@@ -70,12 +70,22 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ preferenceId }, { status: 201 });
-  } catch (error) {
-    console.error("Erro ao criar preferência do Mercado Pago:", error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Falha ao criar preferência de pagamento",
+        status: payment.status,
+        statusDetail: payment.statusDetail,
+        paymentId: payment.id,
+        qrCode: payment.qrCode,
+        qrCodeBase64: payment.qrCodeBase64,
+        ticketUrl: payment.ticketUrl,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Erro ao processar pagamento:", error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Falha ao processar pagamento",
       },
       { status: 500 },
     );

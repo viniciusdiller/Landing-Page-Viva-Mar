@@ -26,6 +26,11 @@ export interface PublicRoomApiItem {
   amenitiesList: string[];
   photoUrls: string[];
   remainingQuantity: number;
+  // Mínimo de estadia. Quando a busca informa checkIn/checkOut, já vem
+  // ajustado pra tarifa sazonal do período (pode exigir mais noites que o
+  // padrão do quarto, ex.: Réveillon).
+  minStayNights: number | null;
+  minStayDays: number | null;
 }
 
 export interface FetchPublicRoomsParams {
@@ -67,6 +72,8 @@ export interface RoomType {
   available: boolean;
   availableUnits?: number; // quantidade de unidades disponíveis
   capacity: number; // número de hóspedes que o quarto acomoda
+  minStayNights: number | null; // mínimo de noites exigido (null = sem mínimo)
+  minStayDays: number | null; // mínimo de dias corridos exigido (null = sem mínimo)
   // Campos extras para UI
   size?: string; // ex: "28 m²"
   bedType?: string; // ex: "Cama King"
@@ -81,6 +88,13 @@ export interface GuestData {
   phone: string;
   cpf?: string;
   specialRequests?: string;
+  cep?: string;
+  address?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 // --- RESERVA (pré criação) ---
@@ -101,17 +115,47 @@ export interface BookingFormData {
   guest: GuestData;
 }
 
-// --- CRIAÇÃO DE SESSÃO DE CHECKOUT (Mercado Pago) ---
-// Enviado para POST /api/checkout/create-preference. É o BookingFormData
-// mais os dados que só existem no front (nome do quarto, datas em contexto)
-// e que precisam aparecer no Checkout Pro e ser reaproveitados pelo webhook
-// para criar a reserva de verdade após o pagamento ser aprovado.
+// --- CHECKOUT (Mercado Pago Payment Brick) ---
+// Dados da reserva que só existem no front (nome do quarto, datas em
+// contexto) somados ao BookingFormData. Vai dentro do metadata do pagamento
+// e é reaproveitado pelo webhook pra criar a reserva de verdade no SaaS
+// depois que o Mercado Pago confirma o pagamento.
 export interface CheckoutSessionRequest extends BookingFormData {
   roomName: string;
 }
 
-export interface CheckoutSessionResponse {
-  initPoint: string;
+// Enviado para POST /api/checkout/process-payment: os dados que o Payment
+// Brick devolveu no onSubmit (token do cartão, método escolhido, etc.) mais
+// a reserva que esse pagamento se refere.
+export interface ProcessPaymentRequest {
+  formData: Record<string, unknown>;
+  booking: CheckoutSessionRequest;
+  // Fingerprint do dispositivo coletado pelo SDK do Mercado Pago no
+  // navegador (window.MP_DEVICE_SESSION_ID) — ajuda a análise de risco do
+  // Mercado Pago e evita que ela fique restritiva por falta de sinal.
+  deviceId?: string;
+}
+
+export interface ProcessPaymentResponse {
+  status: string;
+  statusDetail: string;
+  paymentId: number;
+  qrCode: string | null;
+  qrCodeBase64: string | null;
+  ticketUrl: string | null;
+}
+
+// Enviado para POST /api/checkout/create-preference: cria uma preferência do
+// Mercado Pago só pra habilitar a opção de carteira "Mercado Pago" dentro do
+// Payment Brick (o SDK exige um preferenceId pra isso) — cartão e Pix
+// continuam indo direto por /api/checkout/process-payment, sem depender
+// dessa preferência.
+export interface CreatePreferenceRequest {
+  booking: CheckoutSessionRequest;
+}
+
+export interface CreatePreferenceResponse {
+  preferenceId: string;
 }
 
 // --- STATUS DO PAGAMENTO ---

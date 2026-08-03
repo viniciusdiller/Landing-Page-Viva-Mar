@@ -1,6 +1,6 @@
 "use client";
 
-import { BedDouble, CalendarDays, ImageOff, Users } from "lucide-react";
+import { BedDouble, CalendarDays, ImageOff, Moon, Users } from "lucide-react";
 import type { RoomType } from "@/types";
 import { formatBRL } from "@/lib/booking";
 
@@ -22,6 +22,7 @@ export default function RoomCard({ room, hasDates, onBook }: RoomCardProps) {
   const primaryPhoto = room.photoUrls[0] ?? room.images[0] ?? null;
   const ctaLabel = room.available ? "Reservar" : "Consultar";
   const capacityLabel = `${room.maxOccupancy} ${room.maxOccupancy === 1 ? "hospede" : "hospedes"}`;
+  const minimumStayNights = Math.max(room.minStayNights ?? 0, room.minStayDays ?? 0);
 
   return (
     <article className="card flex h-full flex-col overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)]">
@@ -85,6 +86,12 @@ export default function RoomCard({ room, hasDates, onBook }: RoomCardProps) {
             <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
               <CalendarDays size={14} aria-hidden="true" />
               {room.remainingQuantity ?? 0} disponiveis
+            </span>
+          )}
+          {minimumStayNights > 1 && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
+              <Moon size={14} aria-hidden="true" />
+              Minimo {minimumStayNights} noites
             </span>
           )}
         </div>

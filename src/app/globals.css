@@ -121,6 +121,20 @@ input, button, textarea, select { font: inherit; color: inherit; }
 h1, h2, h3, h4, h5, h6 { text-wrap: balance; line-height: 1.15; font-family: var(--font-display); }
 p, li { text-wrap: pretty; }
 
+/* Checkout usa uma tipografia neutra (sans-serif) em vez da serifada do
+   resto do site, inclusive nos textos que o Payment Brick do Mercado Pago
+   injeta (ex.: "Meios de pagamento"), que também são pegos por essa regra
+   por herdarem tags de heading dentro do container do checkout. */
+.checkout-page,
+.checkout-page h1,
+.checkout-page h2,
+.checkout-page h3,
+.checkout-page h4,
+.checkout-page h5,
+.checkout-page h6 {
+  font-family: var(--font-body);
+}
+
 ::selection {
   background: oklch(from #bd9a5f l c h / 0.25);
   color: var(--color-text);

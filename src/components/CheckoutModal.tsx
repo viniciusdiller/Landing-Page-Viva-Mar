@@ -1,19 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Payment } from "@mercadopago/sdk-react";
 import {
   X,
-  TicketPercent,
   Loader2,
   Calendar,
-  Users,
   AlertCircle,
   Gift,
+  Copy,
+  Check,
 } from "lucide-react";
 import { formatBRL, calcNights } from "@/lib/booking";
 import { fetchPackages, calculatePackagesTotal } from "@/lib/api/packages";
-import { createCheckoutSession } from "@/lib/api/checkout";
-import RoomPhotoCarousel from "@/components/RoomPhotoCarousel";
+import {
+  processPayment,
+  getPaymentStatus,
+  createCheckoutPreference,
+} from "@/lib/api/checkout";
+import { ensureMercadoPagoInitialized } from "@/lib/mercadopago-client";
+import { fetchAddressByCep } from "@/lib/api/cep";
+import { maskCPF, maskCEP, maskPhone } from "@/lib/masks";
+import { BRAZILIAN_STATES } from "@/lib/brazilian-states";
 
 import type {
   CheckoutSessionRequest,
@@ -22,6 +30,14 @@ import type {
   Package,
   SelectedPackage,
 } from "@/types";
+
+const PIX_POLL_INTERVAL_MS = 4000;
+
+interface PixPayment {
+  paymentId: number;
+  qrCode: string;
+  qrCodeBase64: string;
+}
 
 interface CheckoutModalProps {
   open: boolean;
@@ -42,6 +58,13 @@ const DEFAULT_GUEST: GuestData = {
   phone: "",
   cpf: "",
   specialRequests: "",
+  cep: "",
+  address: "",
+  addressNumber: "",
+  addressComplement: "",
+  neighborhood: "",
+  city: "",
+  state: "",
 };
 
 // Função para converter YYYY-MM-DD em DD/MM/YYYY
@@ -66,7 +89,6 @@ export default function CheckoutModal({
   );
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponMessage, setCouponMessage] = useState<string>("");
-  const [submitting, setSubmitting] = useState(false);
   const [resultMessage, setResultMessage] = useState("");
   const [submitError, setSubmitError] = useState(false);
   const [guestsCount, setGuestsCount] = useState(bookingContext.guests);
@@ -79,6 +101,11 @@ export default function CheckoutModal({
   );
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [pixStatus, setPixStatus] = useState<string | null>(null);
+  const [copiedPixCode, setCopiedPixCode] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [preferenceId, setPreferenceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -88,6 +115,9 @@ export default function CheckoutModal({
       setGuestsCount(bookingContext.guests);
       setCheckIn(bookingContext.checkIn);
       setCheckOut(bookingContext.checkOut);
+      setPixPayment(null);
+      setPixStatus(null);
+      ensureMercadoPagoInitialized();
       // Carregar pacotes quando o modal abre
       setLoadingPackages(true);
       fetchPackages()
@@ -108,6 +138,31 @@ export default function CheckoutModal({
       document.body.style.overflow = "unset";
     };
   }, [open]);
+
+  // Enquanto tiver um Pix pendente, consulta o status periodicamente e
+  // redireciona pra tela de sucesso assim que o pagamento for aprovado
+  // (o webhook confirma a reserva de forma independente, isso aqui é só
+  // feedback visual pro hóspede).
+  useEffect(() => {
+    if (!pixPayment) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const status = await getPaymentStatus(pixPayment.paymentId);
+        setPixStatus(status);
+        if (status === "approved") {
+          clearInterval(interval);
+          window.location.href = "/reserva/sucesso";
+        } else if (status === "rejected" || status === "cancelled") {
+          clearInterval(interval);
+        }
+      } catch (error) {
+        console.error("Erro ao consultar status do Pix:", error);
+      }
+    }, PIX_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [pixPayment]);
 
   const nights = useMemo(() => calcNights(checkIn, checkOut), [checkIn, checkOut]);
   const hasDateError = Boolean(checkIn && checkOut) && nights <= 0;
@@ -133,10 +188,105 @@ export default function CheckoutModal({
     0,
   );
 
+  const todayISO = new Date().toISOString().split("T")[0];
+  const hasDates = Boolean(checkIn && checkOut) && !hasDateError;
+  const exceedsCapacity = room ? guestsCount > room.capacity : false;
+  const isFull = room ? (room as any).remainingQuantity <= 0 : false;
+  // minStayNights e minStayDays representam o mesmo tipo de mínimo (em
+  // noites) por dois caminhos diferentes no SaaS — o maior dos dois é o que
+  // vale. Validar isso aqui, antes do pagamento, evita cobrar o hóspede por
+  // uma estadia que o backend vai recusar quando a reserva for confirmada
+  // (o pagamento já aprovado não seria estornado automaticamente).
+  const minimumStayNights = room
+    ? Math.max(room.minStayNights ?? 0, room.minStayDays ?? 0)
+    : 0;
+  const meetsMinimumStay = minimumStayNights <= 0 || nights >= minimumStayNights;
+  const guestFieldsComplete = Boolean(
+    guest.firstName.trim() &&
+      guest.lastName.trim() &&
+      guest.email.trim() &&
+      guest.phone.trim() &&
+      guest.cpf?.trim(),
+  );
+
+  // Cria (ou renova, se o valor/dados mudarem) uma preferência do Mercado
+  // Pago assim que os dados essenciais pra pagar estiverem prontos — só pra
+  // liberar a opção de carteira "Mercado Pago" no Payment Brick, que exige
+  // um preferenceId. Cartão e Pix não dependem disso.
+  useEffect(() => {
+    if (
+      !room ||
+      !guestFieldsComplete ||
+      !hasDates ||
+      exceedsCapacity ||
+      isFull ||
+      !meetsMinimumStay
+    ) {
+      setPreferenceId(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPreferenceId(null);
+
+    const checkoutRequest = buildCheckoutRequest();
+    if (!checkoutRequest) return;
+
+    createCheckoutPreference(checkoutRequest)
+      .then((id) => {
+        if (!cancelled) setPreferenceId(id);
+      })
+      .catch((error) => {
+        console.error("Erro ao criar preferência do Mercado Pago:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    room?.id,
+    guestFieldsComplete,
+    hasDates,
+    exceedsCapacity,
+    isFull,
+    meetsMinimumStay,
+    total,
+    guest.email,
+    checkIn,
+    checkOut,
+  ]);
+
   if (!open || !room) return null;
 
   function updateGuest<K extends keyof GuestData>(key: K, value: GuestData[K]) {
     setGuest((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleCepChange(rawValue: string) {
+    const masked = maskCEP(rawValue);
+    updateGuest("cep", masked);
+
+    const digits = masked.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+
+    setCepLoading(true);
+    try {
+      const found = await fetchAddressByCep(digits);
+      if (found) {
+        setGuest((prev) => ({
+          ...prev,
+          address: found.address || prev.address,
+          neighborhood: found.neighborhood || prev.neighborhood,
+          city: found.city || prev.city,
+          state: found.state || prev.state,
+        }));
+      }
+    } catch (error) {
+      console.error("Erro ao buscar endereço pelo CEP:", error);
+    } finally {
+      setCepLoading(false);
+    }
   }
 
   function togglePackage(packageId: string, quantity: number) {
@@ -195,9 +345,8 @@ export default function CheckoutModal({
     }
   }
 
-  async function handleSubmitReservation(e: React.FormEvent) {
-    e.preventDefault();
-    if (!room) return;
+  function buildCheckoutRequest(): CheckoutSessionRequest | null {
+    if (!room) return null;
 
     const selectedPackagesArray: SelectedPackage[] = Array.from(
       selectedPackages.entries(),
@@ -213,7 +362,7 @@ export default function CheckoutModal({
       };
     });
 
-    const checkoutRequest: CheckoutSessionRequest = {
+    return {
       roomId: room.id,
       roomName: room.name,
       propertyId: room.propertyId,
@@ -230,156 +379,265 @@ export default function CheckoutModal({
       total,
       guest,
     };
+  }
 
-    setSubmitting(true);
+  // Callback do Payment Brick: já recebe o cartão tokenizado (ou os dados do
+  // Pix) prontos pra mandar pro Mercado Pago — nenhum dado de cartão passa
+  // pelo nosso servidor em texto puro.
+  async function handlePaymentSubmit(param: { formData: unknown }) {
+    const checkoutRequest = buildCheckoutRequest();
+    if (!checkoutRequest) return;
+
+    const formData = param.formData as Record<string, unknown>;
+    // Fingerprint que o SDK do Mercado Pago coleta sozinho no navegador
+    // assim que carrega — sem mandar isso pro backend, a análise de risco
+    // do Mercado Pago fica sem sinal nenhum do dispositivo e tende a
+    // restringir os meios de pagamento (na prática, só libera Pix).
+    const deviceId = (window as any).MP_DEVICE_SESSION_ID as string | undefined;
+
     setResultMessage("");
+    setSubmitError(false);
 
     try {
-      const { initPoint } = await createCheckoutSession(checkoutRequest);
-      // Sai do site e vai para o checkout hospedado do Mercado Pago — a
-      // reserva só é criada de fato depois que o pagamento é aprovado lá
-      // (ver o webhook em src/app/api/webhooks/mercadopago/route.ts).
-      window.location.href = initPoint;
+      const result = await processPayment(formData, checkoutRequest, deviceId);
+
+      if (result.status === "approved") {
+        window.location.href = "/reserva/sucesso";
+        return;
+      }
+
+      if (result.qrCode && result.qrCodeBase64) {
+        // Pix: mostra o QR code aqui mesmo, sem sair da página.
+        setPixPayment({
+          paymentId: result.paymentId,
+          qrCode: result.qrCode,
+          qrCodeBase64: result.qrCodeBase64,
+        });
+        return;
+      }
+
+      if (result.status === "pending" || result.status === "in_process") {
+        window.location.href = "/reserva/pendente";
+        return;
+      }
+
+      setResultMessage(
+        "Pagamento não aprovado. Verifique os dados do cartão ou escolha outra forma de pagamento.",
+      );
+      setSubmitError(true);
     } catch (error) {
       setResultMessage(
         error instanceof Error
           ? error.message
-          : "Falha ao iniciar o pagamento. Tente novamente.",
+          : "Falha ao processar o pagamento. Tente novamente.",
       );
       setSubmitError(true);
-    } finally {
-      setSubmitting(false);
+      // Deixa o Brick também mostrar seu próprio estado de erro/retry.
+      throw error;
     }
   }
 
-  const inputClassName =
-    "w-full border-0 border-b border-gray-300 py-2.5 px-0 focus:ring-0 focus:border-black bg-transparent text-[15px] transition-colors outline-none placeholder:text-gray-400";
+  function copyPixCode() {
+    if (!pixPayment) return;
+    navigator.clipboard.writeText(pixPayment.qrCode).then(() => {
+      setCopiedPixCode(true);
+      setTimeout(() => setCopiedPixCode(false), 2000);
+    });
+  }
 
-  const todayISO = new Date().toISOString().split("T")[0];
-  const hasDates = Boolean(checkIn && checkOut) && !hasDateError;
-  const exceedsCapacity = room ? guestsCount > room.capacity : false;
-  const isFull = room ? (room as any).remainingQuantity <= 0 : false;
+  const inputClassName =
+    "w-full rounded-lg border border-gray-300 bg-white px-4 py-3.5 text-[15px] text-gray-900 outline-none transition-colors focus:border-black placeholder:text-gray-400";
+
+  const roomThumb = room.images[0];
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 md:p-8">
-      {/* Overlay Escuro */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-        aria-label="Fechar checkout"
-      />
-
-      {/* Container do Modal */}
-      <div className="relative w-full max-w-5xl bg-white shadow-2xl flex flex-col max-h-[95vh] md:max-h-[85vh] overflow-hidden">
-        {/* Header do Modal */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h3
-            className="text-[#2f3134] uppercase text-xs md:text-sm"
+    <div className="checkout-page fixed inset-0 z-[60] bg-white overflow-y-auto">
+      {/* Cabeçalho */}
+      <header className="border-b border-gray-100">
+        <div className="max-w-[1180px] mx-auto flex items-center justify-between px-6 lg:px-10 py-6">
+          <p
+            className="text-gray-900 uppercase"
             style={{
-              letterSpacing: "0.25em",
+              fontFamily: "var(--font-display)",
+              fontSize: "1.1rem",
               fontWeight: 600,
-              fontFamily: "var(--font-body)",
+              letterSpacing: "0.04em",
             }}
           >
-            Finalizar Reserva
-          </h3>
+            Viva Mar
+          </p>
           <button
-            className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 transition-colors"
+            className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 transition-colors rounded-full"
             onClick={onClose}
-            aria-label="Fechar"
+            aria-label="Fechar checkout"
           >
             <X size={20} strokeWidth={1.5} />
           </button>
         </div>
+      </header>
 
-        {/* Foto do quarto em destaque, ocupando a largura toda do modal */}
-        <RoomPhotoCarousel
-          images={room.images}
-          alt={room.name}
-          sizeClassName="h-48 sm:h-64 md:h-72"
-          className="shrink-0"
-        />
+      {/* Corpo - 2 colunas, igual a um checkout de e-commerce */}
+      <div className="max-w-[1180px] mx-auto lg:flex lg:items-start">
+        {/* Coluna principal - Contato, Estadia, Pagamento */}
+        <div className="flex-1 px-6 lg:px-10 py-10 lg:max-w-[680px]">
+          {/* Contato */}
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 mb-5">Contato</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input
+                className={inputClassName}
+                placeholder="Nome"
+                value={guest.firstName}
+                onChange={(e) => updateGuest("firstName", e.target.value)}
+                required
+              />
+              <input
+                className={inputClassName}
+                placeholder="Sobrenome"
+                value={guest.lastName}
+                onChange={(e) => updateGuest("lastName", e.target.value)}
+                required
+              />
+              <input
+                className={`${inputClassName} sm:col-span-2`}
+                type="email"
+                placeholder="E-mail"
+                value={guest.email}
+                onChange={(e) => updateGuest("email", e.target.value)}
+                required
+              />
+              <input
+                className={inputClassName}
+                placeholder="Telefone"
+                value={guest.phone}
+                onChange={(e) => updateGuest("phone", maskPhone(e.target.value))}
+                inputMode="tel"
+                required
+              />
+              <input
+                className={inputClassName}
+                placeholder="CPF"
+                value={guest.cpf}
+                onChange={(e) => updateGuest("cpf", maskCPF(e.target.value))}
+                inputMode="numeric"
+                required
+              />
 
-        {/* Corpo do Modal - Grid 2 colunas */}
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
-          {/* Lado Esquerdo - Resumo do Quarto */}
-          <aside className="lg:w-2/5 bg-[#ececec] p-6 lg:p-8 flex flex-col border-r border-gray-200 lg:overflow-y-auto">
-            <h4
-              style={{ fontFamily: "var(--font-display)" }}
-              className="text-2xl font-semibold mb-2 text-gray-900"
-            >
-              {room.name}
-            </h4>
-            {/* Comodidades (Amenities) adicionadas aqui */}
-            {room.amenities && room.amenities.length > 0 && (
-              <div className="flex flex-wrap gap-x-2 gap-y-1 mb-5">
-                {room.amenities.map((amenity, index) => (
-                  <span
-                    key={index}
-                    className="text-[10px] uppercase tracking-widest text-gray-500"
-                  >
-                    {amenity.label}{" "}
-                    {index < room.amenities!.length - 1 && (
-                      <span className="ml-2 text-gray-400">•</span>
-                    )}
-                  </span>
+              <div className="relative sm:col-span-2">
+                <input
+                  className={inputClassName}
+                  placeholder="CEP"
+                  value={guest.cep}
+                  onChange={(e) => handleCepChange(e.target.value)}
+                  inputMode="numeric"
+                />
+                {cepLoading && (
+                  <Loader2
+                    size={16}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-gray-400"
+                  />
+                )}
+              </div>
+
+              <input
+                className={`${inputClassName} sm:col-span-2`}
+                placeholder="Endereço"
+                value={guest.address}
+                onChange={(e) => updateGuest("address", e.target.value)}
+              />
+              <input
+                className={inputClassName}
+                placeholder="Número"
+                value={guest.addressNumber}
+                onChange={(e) => updateGuest("addressNumber", e.target.value)}
+              />
+              <input
+                className={inputClassName}
+                placeholder="Complemento (opcional)"
+                value={guest.addressComplement}
+                onChange={(e) => updateGuest("addressComplement", e.target.value)}
+              />
+              <input
+                className={inputClassName}
+                placeholder="Bairro"
+                value={guest.neighborhood}
+                onChange={(e) => updateGuest("neighborhood", e.target.value)}
+              />
+              <input
+                className={inputClassName}
+                placeholder="Cidade"
+                value={guest.city}
+                onChange={(e) => updateGuest("city", e.target.value)}
+              />
+              <select
+                className={`${inputClassName} sm:col-span-2 text-gray-900`}
+                value={guest.state}
+                onChange={(e) => updateGuest("state", e.target.value)}
+              >
+                <option value="">Estado</option>
+                {BRAZILIAN_STATES.map((state) => (
+                  <option key={state.uf} value={state.uf}>
+                    {state.name}
+                  </option>
                 ))}
-              </div>
-            )}
-            <div className="mb-4">
-              <div className="grid grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-[10px] tracking-widest uppercase text-gray-500">
-                    Check-in
-                  </span>
-                  <input
-                    type="date"
-                    min={todayISO}
-                    value={checkIn}
-                    onChange={(e) => setCheckIn(e.target.value)}
-                    className="mt-1 w-full border-0 border-b border-gray-300 bg-transparent py-1.5 text-sm font-semibold text-gray-900 outline-none focus:border-black cursor-pointer"
-                    aria-invalid={hasDateError}
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[10px] tracking-widest uppercase text-gray-500">
-                    Check-out
-                  </span>
-                  <input
-                    type="date"
-                    min={checkIn || todayISO}
-                    value={checkOut}
-                    onChange={(e) => setCheckOut(e.target.value)}
-                    className={`mt-1 w-full border-0 border-b bg-transparent py-1.5 text-sm font-semibold outline-none cursor-pointer ${
-                      hasDateError
-                        ? "border-red-400 text-red-600"
-                        : "border-gray-300 text-gray-900 focus:border-black"
-                    }`}
-                    aria-invalid={hasDateError}
-                  />
-                </label>
-              </div>
-              {hasDateError ? (
-                <p className="mt-2 text-xs text-red-500">
-                  O check-out deve ser depois do check-in.
-                </p>
-              ) : (
-                checkIn &&
-                checkOut && (
-                  <p className="mt-2 text-xs text-gray-500 uppercase tracking-wider">
-                    {nights} {nights === 1 ? "noite" : "noites"}
-                  </p>
-                )
-              )}
+              </select>
+
+              <textarea
+                className={`${inputClassName} sm:col-span-2 min-h-[80px] resize-none`}
+                placeholder="Pedidos especiais (opcional)"
+                value={guest.specialRequests}
+                onChange={(e) => updateGuest("specialRequests", e.target.value)}
+              />
             </div>
-            <div className="mb-8 flex items-center gap-3">
+          </section>
+
+          {/* Detalhes da estadia (equivalente a "Entrega" num checkout de loja) */}
+          <section className="mt-10 pt-10 border-t border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-900 mb-5">
+              Detalhes da estadia
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <label className="block">
+                <span className="text-xs text-gray-500">Check-in</span>
+                <input
+                  type="date"
+                  min={todayISO}
+                  value={checkIn}
+                  onChange={(e) => setCheckIn(e.target.value)}
+                  className={`${inputClassName} mt-1 cursor-pointer`}
+                  aria-invalid={hasDateError}
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs text-gray-500">Check-out</span>
+                <input
+                  type="date"
+                  min={checkIn || todayISO}
+                  value={checkOut}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                  className={`${inputClassName} mt-1 cursor-pointer ${
+                    hasDateError ? "border-red-400 text-red-600" : ""
+                  }`}
+                  aria-invalid={hasDateError}
+                />
+              </label>
+            </div>
+
+            {hasDateError && (
+              <p className="text-xs text-red-500 mb-4">
+                O check-out deve ser depois do check-in.
+              </p>
+            )}
+
+            <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() =>
                     setGuestsCount((current) => Math.max(1, current - 1))
                   }
-                  className="w-7 h-7 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded hover:bg-gray-100 transition-colors disabled:opacity-40"
+                  className="w-9 h-9 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40"
                   disabled={guestsCount <= 1}
                   aria-label="Diminuir número de hóspedes"
                 >
@@ -395,299 +653,261 @@ export default function CheckoutModal({
                       room ? Math.min(room.capacity, current + 1) : current + 1,
                     )
                   }
-                  className="w-7 h-7 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded hover:bg-gray-100 transition-colors disabled:opacity-40"
+                  className="w-9 h-9 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40"
                   disabled={room ? guestsCount >= room.capacity : false}
                   aria-label="Aumentar número de hóspedes"
                 >
                   +
                 </button>
               </div>
-              <span className="text-xs tracking-wider uppercase text-gray-500">
+              <span className="text-sm text-gray-500">
                 hóspede(s){room ? ` · máx. ${room.capacity}` : ""}
               </span>
             </div>
 
-            {/* Pacotes e Adicionais */}
-            <div className="mb-8 pt-6 border-t border-gray-300/60">
-              <label className="block mb-4 text-[10px] tracking-widest uppercase font-semibold text-gray-500">
-                <Gift size={14} className="inline mr-2 -mt-0.5" />
-                Pacotes & Adicionais
-              </label>
+            <button
+              type="button"
+              onClick={() => setIsPackagesModalOpen(true)}
+              className={`${inputClassName} flex items-center justify-between hover:bg-gray-50 transition-colors mb-2`}
+            >
+              <span className="flex items-center gap-2 text-gray-700">
+                <Gift size={16} />
+                {selectedPackagesCount > 0
+                  ? `${selectedPackagesCount} adicional(is) selecionado(s)`
+                  : "Selecionar pacotes e adicionais"}
+              </span>
+              <span className="text-sm font-semibold text-[var(--color-primary)]">
+                {selectedPackagesCount > 0 ? `+ ${formatBRL(packagesTotal)}` : "Abrir"}
+              </span>
+            </button>
+            {loadingPackages && (
+              <p className="text-xs text-gray-500">Carregando pacotes...</p>
+            )}
 
-              <button
-                type="button"
-                onClick={() => setIsPackagesModalOpen(true)}
-                className="w-full flex items-center justify-between border border-gray-300 bg-white hover:bg-gray-50 transition-colors px-4 py-3"
-              >
-                <span className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  {selectedPackagesCount > 0
-                    ? `${selectedPackagesCount} adicional(is) selecionado(s)`
-                    : "Selecionar pacotes e adicionais"}
-                </span>
-                <span className="text-xs font-bold text-[var(--color-primary)]">
-                  {selectedPackagesCount > 0
-                    ? `+ ${formatBRL(packagesTotal)}`
-                    : "Abrir"}
-                </span>
-              </button>
-
-              {loadingPackages && (
-                <p className="mt-3 text-xs text-gray-500">Carregando pacotes...</p>
-              )}
-
-              {!loadingPackages && packages.length === 0 && (
-                <p className="mt-3 text-xs text-gray-400">
-                  Nenhum pacote disponível no momento.
+            {!checkIn || !checkOut ? (
+              <div className="mt-4 bg-amber-50/60 border border-amber-100 p-4 rounded-lg flex items-start gap-3">
+                <Calendar className="text-amber-600 mt-0.5" size={18} strokeWidth={1.5} />
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Selecione as datas de <strong>check-in</strong> e{" "}
+                  <strong>check-out</strong> para continuar.
                 </p>
-              )}
-
-              {packagesTotal > 0 && (
-                <div className="mt-4 pt-3 border-t border-gray-300/60 flex justify-between text-sm font-semibold text-gray-700">
-                  <span>Adicionais</span>
-                  <span className="text-[var(--color-primary)]">
-                    + {formatBRL(packagesTotal)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3 pt-6 border-t border-gray-300/60 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal (diária)</span>
-                <strong>{formatBRL(subtotal)}</strong>
               </div>
-              {packagesTotal > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>Adicionais</span>
-                  <strong className="text-[var(--color-primary)]">
-                    + {formatBRL(packagesTotal)}
-                  </strong>
-                </div>
-              )}
-              <div className="flex justify-between text-[var(--color-success)]">
-                <span>Desconto</span>
-                <strong>- {formatBRL(discountAmount)}</strong>
-              </div>
-              <div className="pt-4 mt-2 border-t border-gray-300/60 flex justify-between text-base text-black">
-                <span className="uppercase tracking-widest text-xs font-semibold self-center">
-                  Total
-                </span>
-                <strong className="text-lg">{formatBRL(total)}</strong>
-              </div>
-            </div>
-            {/* Cupom */}
-
-            <div className="mt-8 pt-6 border-t border-gray-300/60 pb-2">
-              <label className="block mb-3 text-[10px] tracking-widest uppercase font-semibold text-gray-500">
-                <TicketPercent size={14} className="inline mr-2 -mt-0.5" />
-                Cupom Promocional
-              </label>
-
-              {/* Container Unificado (Input + Botão) */}
-              <div className="flex w-full bg-white border border-gray-300 focus-within:border-black transition-colors shadow-sm">
-                <input
-                  className="flex-1 bg-transparent border-0 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-0 placeholder:text-gray-400 uppercase disabled:opacity-50"
-                  placeholder="EX: VIVAMAR10"
-                  value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  disabled={appliedCoupon !== undefined || isApplyingCoupon}
-                />
-                <button
-                  type="button"
-                  className="px-6 bg-black text-white text-[10px] uppercase tracking-[0.2em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]"
-                  onClick={applyCoupon}
-                  disabled={isApplyingCoupon || appliedCoupon !== undefined}
-                >
-                  {isApplyingCoupon ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : appliedCoupon ? (
-                    "Aplicado"
-                  ) : (
-                    "Aplicar"
-                  )}
-                </button>
-              </div>
-
-              {couponMessage && (
-                <p
-                  className={`mt-3 text-xs font-medium ${
-                    appliedCoupon
-                      ? "text-[var(--color-success)]"
-                      : "text-red-500"
-                  }`}
-                >
-                  {couponMessage}
+            ) : !meetsMinimumStay ? (
+              <div className="mt-4 bg-red-50/60 border border-red-100 p-4 rounded-lg flex items-start gap-3">
+                <AlertCircle className="text-red-600 mt-0.5" size={18} strokeWidth={1.5} />
+                <p className="text-xs text-red-800 leading-relaxed">
+                  Este quarto exige uma estadia mínima de {minimumStayNights}{" "}
+                  {minimumStayNights === 1 ? "noite" : "noites"}. Ajuste as datas de
+                  check-in/check-out para continuar.
                 </p>
-              )}
-            </div>
-
-          </aside>
-          {/* Lado Direito - Formulário */}
-          <form
-            onSubmit={handleSubmitReservation}
-            className="lg:w-3/5 p-6 lg:p-8 flex flex-col justify-between bg-white lg:overflow-y-auto "
-          >
-            <div>
-              <h4 className="text-xs uppercase tracking-[0.2em] font-semibold text-gray-800 mb-6">
-                Informações de Reserva
-              </h4>
-
-              {!checkIn || !checkOut ? (
-                <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-lg mb-8 flex items-start gap-3">
-                  <Calendar
-                    className="text-amber-600 mt-0.5"
-                    size={18}
-                    strokeWidth={1.5}
-                  />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] uppercase tracking-widest font-bold text-amber-900">
-                      Período não definido
-                    </span>
-                    <p className="text-xs text-amber-800 leading-relaxed">
-                      Para prosseguir, selecione as datas de{" "}
-                      <strong>Check-in</strong> e <strong>Check-out</strong> ao
-                      lado, no resumo do quarto.
-                    </p>
-                  </div>
-                </div>
-              ) : hasDateError ? (
-                <div className="bg-red-50/50 border border-red-100 p-4 rounded-lg mb-8 flex items-start gap-3">
-                  <AlertCircle
-                    className="text-red-600 mt-0.5"
-                    size={18}
-                    strokeWidth={1.5}
-                  />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] uppercase tracking-widest font-bold text-red-900">
-                      Datas inválidas
-                    </span>
-                    <p className="text-xs text-red-800 leading-relaxed">
-                      O check-out deve ser depois do check-in. Ajuste as datas
-                      no resumo do quarto.
-                    </p>
-                  </div>
-                </div>
-              ) : exceedsCapacity ? (
-                <div className="bg-red-50/50 border border-red-100 p-4 rounded-lg mb-8 flex items-start gap-3">
-                  <AlertCircle
-                    className="text-red-600 mt-0.5"
-                    size={18}
-                    strokeWidth={1.5}
-                  />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] uppercase tracking-widest font-bold text-red-900">
-                      Capacidade Excedida
-                    </span>
-                    <p className="text-xs text-red-800 leading-relaxed">
-                      Este quarto acomoda até {room.capacity} hóspedes. Por
-                      favor, ajuste o número de pessoas ou selecione uma
-                      acomodação de maior porte.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-vm-teal-50/30 border border-vm-teal-100 p-4 rounded-lg mb-8 flex items-start gap-3">
-                  <Calendar
-                    className="text-vm-teal-600 mt-0.5"
-                    size={18}
-                    strokeWidth={1.5}
-                  />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] uppercase tracking-widest font-bold text-vm-teal-900">
-                      Período Selecionado
-                    </span>
-                    <p className="text-xs text-vm-teal-800 leading-relaxed">
-                      {formatDateBR(checkIn)} até{" "}
-                      {formatDateBR(checkOut)}
-                      <span className="mx-2 opacity-50">•</span>
-                      {nights} noites para{" "}
-                      {guestsCount} hóspedes.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <h4 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-gray-400 mb-6">
-                Dados do Titular
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
-                <input
-                  className={inputClassName}
-                  placeholder="Nome"
-                  value={guest.firstName}
-                  onChange={(e) => updateGuest("firstName", e.target.value)}
-                  required
-                />
-                <input
-                  className={inputClassName}
-                  placeholder="Sobrenome"
-                  value={guest.lastName}
-                  onChange={(e) => updateGuest("lastName", e.target.value)}
-                  required
-                />
-                <input
-                  className={inputClassName}
-                  type="email"
-                  placeholder="E-mail"
-                  value={guest.email}
-                  onChange={(e) => updateGuest("email", e.target.value)}
-                  required
-                />
-                <input
-                  className={inputClassName}
-                  placeholder="Telefone"
-                  value={guest.phone}
-                  onChange={(e) => updateGuest("phone", e.target.value)}
-                  required
-                />
-                <input
-                  className={`${inputClassName} sm:col-span-2`}
-                  placeholder="CPF"
-                  value={guest.cpf}
-                  onChange={(e) => updateGuest("cpf", e.target.value)}
-                  required
-                />
-                <textarea
-                  className={`${inputClassName} sm:col-span-2 min-h-[80px] resize-none`}
-                  placeholder="Pedidos especiais (opcional)"
-                  value={guest.specialRequests}
-                  onChange={(e) =>
-                    updateGuest("specialRequests", e.target.value)
-                  }
-                />
               </div>
-            </div>
+            ) : exceedsCapacity ? (
+              <div className="mt-4 bg-red-50/60 border border-red-100 p-4 rounded-lg flex items-start gap-3">
+                <AlertCircle className="text-red-600 mt-0.5" size={18} strokeWidth={1.5} />
+                <p className="text-xs text-red-800 leading-relaxed">
+                  Este quarto acomoda até {room.capacity} hóspedes. Ajuste o número
+                  de pessoas ou escolha outra acomodação.
+                </p>
+              </div>
+            ) : (
+              hasDates && (
+                <p className="mt-4 text-xs text-gray-500">
+                  {formatDateBR(checkIn)} até {formatDateBR(checkOut)} ·{" "}
+                  {nights} {nights === 1 ? "noite" : "noites"}
+                </p>
+              )
+            )}
+          </section>
 
-            {hasDates && !exceedsCapacity && !isFull && (
-              <div className="mt-10 space-y-4">
-                <button
-                  type="submit"
-                  className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] text-xs font-semibold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 disabled:opacity-60"
-                  disabled={submitting}
-                >
-                  {submitting ? (
+          {/* Pagamento */}
+          <section className="mt-10 pt-10 border-t border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">Pagamento</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Todas as transações são seguras e criptografadas.
+            </p>
+
+            {hasDates && !exceedsCapacity && !isFull && meetsMinimumStay ? (
+              <>
+                {pixPayment ? (
+                  <div className="border border-gray-200 rounded-lg p-6 text-center space-y-4">
+                    <p className="text-xs uppercase tracking-widest font-semibold text-gray-500">
+                      Pague com Pix
+                    </p>
+                    <img
+                      src={`data:image/png;base64,${pixPayment.qrCodeBase64}`}
+                      alt="QR Code Pix"
+                      className="mx-auto w-48 h-48"
+                    />
+                    <button
+                      type="button"
+                      onClick={copyPixCode}
+                      className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-3 text-xs font-semibold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      {copiedPixCode ? <Check size={14} /> : <Copy size={14} />}
+                      {copiedPixCode ? "Código copiado!" : "Copiar código Pix"}
+                    </button>
+                    <p className="text-xs text-gray-500">
+                      {pixStatus === "rejected" || pixStatus === "cancelled"
+                        ? "Este Pix não foi pago a tempo. Feche e tente novamente."
+                        : "Aguardando pagamento... Assim que for identificado, sua reserva é confirmada automaticamente."}
+                    </p>
+                  </div>
+                ) : guestFieldsComplete && preferenceId ? (
+                  <Payment
+                    key={`${total}-${preferenceId}`}
+                    initialization={{
+                      amount: total,
+                      payer: { email: guest.email },
+                      preferenceId,
+                    }}
+                    customization={{
+                      paymentMethods: {
+                        creditCard: "all",
+                        debitCard: "all",
+                        bankTransfer: "all",
+                        mercadoPago: "all",
+                        maxInstallments: 12,
+                      },
+                    }}
+                    onSubmit={handlePaymentSubmit}
+                    onError={(error) => {
+                      console.error("Erro no Payment Brick:", error);
+                    }}
+                  />
+                ) : guestFieldsComplete ? (
+                  <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-500">
                     <Loader2 size={16} className="animate-spin" />
-                  ) : null}
-                  {submitting ? "Redirecionando..." : "Ir para pagamento"}
-                </button>
+                    Preparando formas de pagamento...
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 uppercase tracking-wider text-center py-6 border border-dashed border-gray-300 rounded-lg">
+                    Preencha seus dados de contato acima para escolher a forma de
+                    pagamento.
+                  </p>
+                )}
 
                 {resultMessage && (
                   <p
-                    className={`text-sm font-medium text-center ${
+                    className={`mt-4 text-sm font-medium text-center ${
                       submitError ? "text-red-500" : "text-[var(--color-success)]"
                     }`}
                   >
                     {resultMessage}
                   </p>
                 )}
-              </div>
+              </>
+            ) : (
+              <p className="text-xs text-gray-400 uppercase tracking-wider text-center py-6 border border-dashed border-gray-200 rounded-lg">
+                Finalize os detalhes da estadia acima para ver as formas de
+                pagamento.
+              </p>
             )}
-          </form>
+          </section>
         </div>
 
-        {isPackagesModalOpen && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center p-4 sm:p-6">
+        {/* Barra lateral - Resumo do pedido */}
+        <aside className="lg:w-[380px] xl:w-[420px] lg:sticky lg:top-0 bg-gray-50 px-6 lg:px-8 py-10 lg:border-l border-gray-100 lg:min-h-screen">
+          <div className="flex gap-4 pb-6">
+            {roomThumb ? (
+              <img
+                src={roomThumb}
+                alt={room.name}
+                className="w-16 h-16 rounded-md object-cover border border-gray-200 shrink-0"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-md bg-gray-200 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900">{room.name}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {nights} {nights === 1 ? "noite" : "noites"} · {guestsCount}{" "}
+                {guestsCount === 1 ? "hóspede" : "hóspedes"}
+              </p>
+            </div>
+            <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+              {formatBRL(subtotal)}
+            </p>
+          </div>
+
+          {Array.from(selectedPackages.entries()).map(([id, quantity]) => {
+            const pkg = packages.find((p) => p.id === id);
+            if (!pkg) return null;
+            return (
+              <div key={id} className="flex gap-4 pb-4">
+                <div className="w-16 h-16 rounded-md bg-white border border-gray-200 shrink-0 flex items-center justify-center">
+                  <Gift size={20} className="text-gray-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{pkg.name}</p>
+                  <p className="text-xs text-gray-500 mt-1">Qtd. {quantity}</p>
+                </div>
+                <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                  {formatBRL(pkg.price * quantity)}
+                </p>
+              </div>
+            );
+          })}
+
+          {/* Cupom */}
+          <div className="flex w-full bg-white border border-gray-300 rounded-lg focus-within:border-black transition-colors overflow-hidden mb-6">
+            <input
+              className="flex-1 bg-transparent border-0 px-4 py-3 text-sm text-gray-900 outline-none focus:ring-0 placeholder:text-gray-400 uppercase disabled:opacity-50"
+              placeholder="Cupom promocional"
+              value={couponInput}
+              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+              disabled={appliedCoupon !== undefined || isApplyingCoupon}
+            />
+            <button
+              type="button"
+              className="px-5 bg-black text-white text-[10px] uppercase tracking-[0.2em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[90px]"
+              onClick={applyCoupon}
+              disabled={isApplyingCoupon || appliedCoupon !== undefined}
+            >
+              {isApplyingCoupon ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : appliedCoupon ? (
+                "Aplicado"
+              ) : (
+                "Aplicar"
+              )}
+            </button>
+          </div>
+          {couponMessage && (
+            <p
+              className={`-mt-4 mb-6 text-xs font-medium ${
+                appliedCoupon ? "text-[var(--color-success)]" : "text-red-500"
+              }`}
+            >
+              {couponMessage}
+            </p>
+          )}
+
+          <div className="border-t border-gray-200 pt-4 space-y-2.5 text-sm">
+            <div className="flex justify-between text-gray-600">
+              <span>Subtotal</span>
+              <span>{formatBRL(subtotal + packagesTotal)}</span>
+            </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-[var(--color-success)]">
+                <span>Desconto</span>
+                <span>- {formatBRL(discountAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-baseline pt-3 mt-1 border-t border-gray-200">
+              <span className="text-base font-semibold text-gray-900">Total</span>
+              <span className="text-lg font-semibold text-gray-900">
+                <span className="text-xs font-normal text-gray-400 mr-1.5 align-middle">
+                  BRL
+                </span>
+                {formatBRL(total)}
+              </span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {isPackagesModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
             <div
               className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
               onClick={() => setIsPackagesModalOpen(false)}
@@ -803,6 +1023,5 @@ export default function CheckoutModal({
           </div>
         )}
       </div>
-    </div>
   );
 }

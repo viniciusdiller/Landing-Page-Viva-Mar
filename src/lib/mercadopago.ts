@@ -1,39 +1,9 @@
-// Integração com o Mercado Pago (Checkout Pro).
+// Integração com o Mercado Pago (Payment Brick — cartão, Pix e Mercado Pago
+// embutidos na própria página, sem redirecionar pro site do Mercado Pago).
 // Server-only: usa o Access Token secreto, nunca deve ser importado por um
 // componente "use client" nem exposto ao navegador.
 
-export interface MercadoPagoPreferenceItem {
-  title: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-export interface CreatePreferenceInput {
-  items: MercadoPagoPreferenceItem[];
-  externalReference: string;
-  payerName?: string;
-  payerEmail?: string;
-  metadata?: Record<string, unknown>;
-  backUrls: {
-    success: string;
-    pending: string;
-    failure: string;
-  };
-  notificationUrl: string;
-}
-
-// O Mercado Pago só respeita "auto_return" (redirecionamento automático de
-// volta pro site após o pagamento) quando back_urls.success é https — em
-// localhost/http ele rejeita a preferência inteira com "auto_return invalid.
-// back_url.success must be defined". Em produção (https) isso liga sozinho.
-function shouldAutoReturn(successUrl: string) {
-  return successUrl.startsWith("https://");
-}
-
-export interface MercadoPagoPreference {
-  id: string;
-  initPoint: string;
-}
+import { randomUUID } from "crypto";
 
 export interface MercadoPagoPayment {
   id: number;
@@ -56,14 +26,120 @@ function getAccessToken() {
   return token;
 }
 
+export interface CreatePaymentInput {
+  // Corpo já pronto que veio do Payment Brick (token, payment_method_id,
+  // installments, payer, etc.) — o formato varia por método de pagamento
+  // (cartão, Pix, boleto), então repassamos praticamente como veio.
+  formData: Record<string, unknown>;
+  // Sobrescreve formData.transaction_amount: nunca confiamos no valor que o
+  // Brick manda (roda no navegador, é alterável), sempre usamos o total
+  // calculado a partir do que o próprio backend/preço do quarto informou.
+  transactionAmount: number;
+  description: string;
+  externalReference: string;
+  notificationUrl: string;
+  metadata?: Record<string, unknown>;
+  // Fingerprint do navegador que o SDK do Mercado Pago coleta sozinho
+  // (window.MP_DEVICE_SESSION_ID) assim que é carregado. Sem isso, o motor
+  // antifraude do Mercado Pago não tem nenhum sinal sobre o dispositivo/
+  // sessão de quem está pagando e tende a ser bem mais conservador — na
+  // prática, restringindo a cartão/liberando só Pix, ou recusando cartões
+  // que seriam aprovados. Enviado como header X-meli-session-id.
+  deviceId?: string;
+}
+
+// O Mercado Pago recusa a criação do pagamento inteiro se notification_url
+// não for uma URL pública válida (ex.: http://localhost:3002/... em dev dá
+// "notificaction_url attribute must be url valid"). Em produção (https) isso
+// funciona normalmente; em dev local a gente simplesmente não informa —
+// confirmação de pagamento local só é possível com túnel (ngrok) ou deploy.
+function isPublicHttpsUrl(url: string) {
+  return url.startsWith("https://");
+}
+
+export interface MercadoPagoPaymentResult {
+  id: number;
+  status: string;
+  statusDetail: string;
+  paymentMethodId: string | null;
+  paymentTypeId: string | null;
+  qrCode: string | null;
+  qrCodeBase64: string | null;
+  ticketUrl: string | null;
+}
+
+export async function createPayment(
+  input: CreatePaymentInput,
+): Promise<MercadoPagoPaymentResult> {
+  const response = await fetch("https://api.mercadopago.com/v1/payments", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getAccessToken()}`,
+      // Evita cobrar duas vezes se o cliente reenviar a mesma requisição
+      // (ex.: retry de rede) — cada tentativa nova precisa de uma chave nova.
+      "X-Idempotency-Key": randomUUID(),
+      ...(input.deviceId ? { "X-meli-session-id": input.deviceId } : {}),
+    },
+    body: JSON.stringify({
+      ...input.formData,
+      transaction_amount: input.transactionAmount,
+      description: input.description,
+      external_reference: input.externalReference,
+      ...(isPublicHttpsUrl(input.notificationUrl)
+        ? { notification_url: input.notificationUrl }
+        : {}),
+      metadata: input.metadata,
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const causeMessage = Array.isArray(payload?.cause)
+      ? payload.cause.map((c: { description?: string }) => c.description).join(" ")
+      : null;
+    throw new Error(
+      causeMessage || payload?.message || `Falha ao processar pagamento (${response.status}).`,
+    );
+  }
+
+  const transactionData = payload.point_of_interaction?.transaction_data;
+
+  return {
+    id: payload.id,
+    status: payload.status,
+    statusDetail: payload.status_detail,
+    paymentMethodId: payload.payment_method_id ?? null,
+    paymentTypeId: payload.payment_type_id ?? null,
+    qrCode: transactionData?.qr_code ?? null,
+    qrCodeBase64: transactionData?.qr_code_base64 ?? null,
+    ticketUrl: transactionData?.ticket_url ?? payload.transaction_details?.external_resource_url ?? null,
+  };
+}
+
+export interface CreatePreferenceInput {
+  items: Array<{ title: string; quantity: number; unitPrice: number }>;
+  payerEmail: string;
+  externalReference: string;
+  notificationUrl: string;
+  metadata?: Record<string, unknown>;
+}
+
+// Cria uma preferência do Mercado Pago só pra satisfazer a exigência do
+// Payment Brick de ter um preferenceId pra liberar a opção de carteira
+// "Mercado Pago" (customization.paymentMethods.mercadoPago). Cartão e Pix
+// continuam sendo processados direto via createPayment/v1/payments — essa
+// preferência nunca é usada pra redirecionar o hóspede pra fora da página.
 export async function createCheckoutPreference(
   input: CreatePreferenceInput,
-): Promise<MercadoPagoPreference> {
+): Promise<string> {
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${getAccessToken()}`,
+      "X-Idempotency-Key": randomUUID(),
     },
     body: JSON.stringify({
       items: input.items.map((item) => ({
@@ -72,19 +148,12 @@ export async function createCheckoutPreference(
         unit_price: item.unitPrice,
         currency_id: "BRL",
       })),
-      payer: {
-        name: input.payerName,
-        email: input.payerEmail,
-      },
+      payer: { email: input.payerEmail },
       external_reference: input.externalReference,
+      ...(isPublicHttpsUrl(input.notificationUrl)
+        ? { notification_url: input.notificationUrl }
+        : {}),
       metadata: input.metadata,
-      back_urls: {
-        success: input.backUrls.success,
-        pending: input.backUrls.pending,
-        failure: input.backUrls.failure,
-      },
-      ...(shouldAutoReturn(input.backUrls.success) ? { auto_return: "approved" } : {}),
-      notification_url: input.notificationUrl,
     }),
   });
 
@@ -96,10 +165,7 @@ export async function createCheckoutPreference(
     );
   }
 
-  return {
-    id: payload.id,
-    initPoint: payload.init_point,
-  };
+  return payload.id as string;
 }
 
 export async function getPayment(paymentId: string): Promise<MercadoPagoPayment> {

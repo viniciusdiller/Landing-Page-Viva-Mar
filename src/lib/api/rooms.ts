@@ -197,6 +197,8 @@ function toRoomType(
     available: remainingQuantity > 0,
     availableUnits: remainingQuantity,
     capacity: room.maxGuests,
+    minStayNights: room.minStayNights,
+    minStayDays: room.minStayDays,
   };
 }
 

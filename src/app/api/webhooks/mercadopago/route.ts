@@ -60,6 +60,26 @@ function safeParsePackages(
   }
 }
 
+function buildAddressLine(metadata: Record<string, unknown>) {
+  const address = String(metadata.guest_address || "").trim();
+  if (!address) return null;
+
+  const number = String(metadata.guest_address_number || "").trim();
+  const complement = String(metadata.guest_address_complement || "").trim();
+  const neighborhood = String(metadata.guest_neighborhood || "").trim();
+  const city = String(metadata.guest_city || "").trim();
+  const state = String(metadata.guest_state || "").trim();
+  const cep = String(metadata.guest_cep || "").trim();
+
+  const streetPart = [address, number].filter(Boolean).join(", ");
+  const complementPart = complement ? ` (${complement})` : "";
+  const cityPart = [neighborhood, [city, state].filter(Boolean).join("/")]
+    .filter(Boolean)
+    .join(" - ");
+
+  return `Endereço: ${[streetPart + complementPart, cityPart, cep].filter(Boolean).join(", ")}.`;
+}
+
 function buildReservationNotes(metadata: Record<string, unknown>, paymentId: number) {
   const specialRequests = String(metadata.special_requests || "").trim();
   const packages = safeParsePackages(metadata.packages_json);
@@ -69,6 +89,7 @@ function buildReservationNotes(metadata: Record<string, unknown>, paymentId: num
     packages.length > 0
       ? `Adicionais: ${packages.map((pkg) => `${pkg.name} x${pkg.quantity}`).join(", ")}`
       : null,
+    buildAddressLine(metadata),
     `Pagamento Mercado Pago #${paymentId}.`,
   ].filter(Boolean);
 

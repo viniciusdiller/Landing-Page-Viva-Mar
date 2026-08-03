@@ -26,6 +26,10 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Certificado local (mkcert) para rodar o dev server em HTTPS
+.certs/
+.tools/
+
 # IDE
 .vscode/
 .idea/
