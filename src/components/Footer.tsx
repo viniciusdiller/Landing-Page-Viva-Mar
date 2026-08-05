@@ -115,13 +115,8 @@ export default function Footer() {
         >
           <span>
             © {new Date().getFullYear()} Pousada Viva Mar. Powered by
-            contato@totalsoftware.com
+            contatototalsoftware@gmail.com
           </span>
-          <img
-            src="/Logo Completa TotalSoftware.png"
-            alt="TotalSoftware"
-            className="w-[10%] min-w-[80px]"
-          />
         </div>
       </div>
     </footer>

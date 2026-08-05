@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, BedDouble, Loader2, Moon, Users } from "lucide-react";
@@ -26,12 +26,23 @@ export default function RoomDetailPage() {
 
   const [room, setRoom] = useState<RoomType | null>(null);
   const [loading, setLoading] = useState(true);
+  // Atualizar as datas re-busca o quarto (pra pegar preço/disponibilidade
+  // corretos pro período), mas isso não deve derrubar a página inteira pra
+  // uma tela de carregamento de novo — só a primeira busca faz isso. Trocas
+  // de data depois só mostram um indicador discreto perto do preço.
+  const [refreshingPrice, setRefreshingPrice] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const loadedRoomIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+
+    if (loadedRoomIdRef.current === roomId) {
+      setRefreshingPrice(true);
+    } else {
+      setLoading(true);
+    }
     setNotFound(false);
 
     fetchPublicRooms({
@@ -48,7 +59,10 @@ export default function RoomDetailPage() {
         if (!cancelled) setNotFound(true);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (cancelled) return;
+        loadedRoomIdRef.current = roomId;
+        setLoading(false);
+        setRefreshingPrice(false);
       });
 
     return () => {
@@ -182,8 +196,15 @@ export default function RoomDetailPage() {
               <p className="text-xs uppercase tracking-[0.16em] text-[var(--color-text-faint)] mb-1">
                 Diária
               </p>
-              <p className="text-2xl font-semibold text-[var(--color-primary)] mb-4">
+              <p className="flex items-center gap-2 text-2xl font-semibold text-[var(--color-primary)] mb-4">
                 {formatBRL(room.pricePerNight)}
+                {refreshingPrice && (
+                  <Loader2
+                    size={16}
+                    className="animate-spin text-[var(--color-text-faint)]"
+                    aria-label="Atualizando preço para as datas selecionadas"
+                  />
+                )}
               </p>
 
               <div className="grid grid-cols-2 gap-3 mb-4">

@@ -13,16 +13,16 @@ interface RoomCardProps {
 
 function AvailabilityBadge({ available }: { available: boolean }) {
   return available ? (
-    <span className="badge badge-teal">Disponivel</span>
+    <span className="badge badge-teal">Disponível</span>
   ) : (
-    <span className="badge badge-sand">Indisponivel</span>
+    <span className="badge badge-sand">Indisponível</span>
   );
 }
 
 export default function RoomCard({ room, detailHref }: RoomCardProps) {
   const primaryPhoto = room.photoUrls[0] ?? room.images[0] ?? null;
   const ctaLabel = room.available ? "Reservar" : "Consultar";
-  const capacityLabel = `${room.maxOccupancy} ${room.maxOccupancy === 1 ? "hospede" : "hospedes"}`;
+  const capacityLabel = `${room.maxOccupancy} ${room.maxOccupancy === 1 ? "hóspede" : "hóspedes"}`;
   const minimumStayNights = Math.max(room.minStayNights ?? 0, room.minStayDays ?? 0);
 
   return (
@@ -39,7 +39,7 @@ export default function RoomCard({ room, detailHref }: RoomCardProps) {
         ) : (
           <div className="flex h-full w-full items-center justify-center gap-3 text-[var(--color-text-muted)]">
             <ImageOff size={20} aria-hidden="true" />
-            <span className="text-sm font-medium">Imagem indisponivel</span>
+            <span className="text-sm font-medium">Imagem indisponível</span>
           </div>
         )}
 
@@ -61,7 +61,7 @@ export default function RoomCard({ room, detailHref }: RoomCardProps) {
 
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--color-text-faint)]">
-              Diaria
+              Diária
             </p>
             <strong className="text-lg text-[var(--color-primary)]">
               {formatBRL(room.pricePerNight)}
@@ -72,12 +72,12 @@ export default function RoomCard({ room, detailHref }: RoomCardProps) {
         <div className="mb-4 flex flex-wrap gap-3 text-sm text-[var(--color-text-muted)]">
           <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
             <Users size={14} aria-hidden="true" />
-            Ate {capacityLabel}
+            Até {capacityLabel}
           </span>
           {minimumStayNights > 1 && (
             <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface-2)] px-3 py-1.5">
               <Moon size={14} aria-hidden="true" />
-              Minimo {minimumStayNights} noites
+              Mínimo {minimumStayNights} noites
             </span>
           )}
           {room.beds.length > 0 && (
@@ -100,7 +100,7 @@ export default function RoomCard({ room, detailHref }: RoomCardProps) {
             ))
           ) : (
             <span className="text-sm text-[var(--color-text-faint)]">
-              Comodidades nao informadas.
+              Comodidades não informadas.
             </span>
           )}
         </div>
@@ -108,8 +108,8 @@ export default function RoomCard({ room, detailHref }: RoomCardProps) {
         <div className="mt-auto flex items-center justify-between gap-4 border-t border-[var(--color-divider)] pt-5">
           <p className="text-sm text-[var(--color-text-muted)]">
             {room.available
-              ? "Disponivel para reserva"
-              : "Sem disponibilidade no periodo selecionado"}
+              ? "Disponível para reserva"
+              : "Sem disponibilidade no período selecionado"}
           </p>
 
           <Link

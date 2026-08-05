@@ -13,7 +13,7 @@ const MAX_PHOTOS = 8;
 const FEATURES = [
   { icon: Sun, title: "Pé na areia", description: "A poucos passos do mar" },
   { icon: Waves, title: "2 piscinas", description: "Adulto e infantil com vista" },
-  { icon: Waves, title: "Sauna", description: "Sauna a vapor extremamente confortavel" },
+  { icon: Waves, title: "Sauna", description: "Sauna a vapor extremamente confortável" },
   { icon: Coffee, title: "Café da manhã", description: "Completo e com vista para o mar" },
   { icon: Wifi, title: "Wi-Fi", description: "Internet de alta velocidade" },
   { icon: Car, title: "Estacionamento", description: "Privativo e gratuito" },

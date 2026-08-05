@@ -46,7 +46,7 @@ export default function RoomList({ searchParams }: RoomListProps) {
           setError(
             loadError instanceof Error
               ? loadError.message
-              : "Nao foi possivel carregar os quartos no momento.",
+              : "Não foi possível carregar os quartos no momento.",
           );
         }
       } finally {
@@ -71,10 +71,10 @@ export default function RoomList({ searchParams }: RoomListProps) {
           style={{ fontSize: "var(--text-sm)" }}
         >
           Disponibilidade consultada para {" "}
-          {new Date(searchParams.checkIn).toLocaleDateString("pt-BR")} ate{" "}
+          {new Date(searchParams.checkIn).toLocaleDateString("pt-BR")} até{" "}
           {new Date(searchParams.checkOut).toLocaleDateString("pt-BR")}
           {searchParams.guests
-            ? `, ${searchParams.guests} hospede${searchParams.guests > 1 ? "s" : ""}`
+            ? `, ${searchParams.guests} hóspede${searchParams.guests > 1 ? "s" : ""}`
             : ""}
         </p>
       )}
@@ -91,14 +91,14 @@ export default function RoomList({ searchParams }: RoomListProps) {
       ) : error ? (
         <div className="rounded-[var(--radius-xl)] border border-red-200 bg-red-50 px-6 py-10 text-center">
           <p className="mb-2 text-base font-semibold text-[var(--color-error)]">
-            Nao foi possivel carregar os quartos.
+            Não foi possível carregar os quartos.
           </p>
           <p className="text-sm text-red-700">{error}</p>
         </div>
       ) : rooms.length === 0 ? (
         <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-white/70 px-6 py-14 text-center">
           <p className="mb-2 text-base text-[var(--color-text-muted)]">
-            Nenhum quarto ativo foi encontrado para os criterios selecionados.
+            Nenhum quarto ativo foi encontrado para os critérios selecionados.
           </p>
           <p className="text-sm text-[var(--color-text-faint)]">
             Revise as datas e tente novamente.
