@@ -290,7 +290,7 @@ export default function RoomDetailPage() {
               <button
                 type="button"
                 className="btn btn-primary w-full justify-center disabled:opacity-50 disabled:pointer-events-none"
-                disabled={hasDateError}
+                disabled={hasDateError || !room.available}
                 onClick={() => setCheckoutOpen(true)}
               >
                 {room.available ? "Reservar" : "Consultar"}
