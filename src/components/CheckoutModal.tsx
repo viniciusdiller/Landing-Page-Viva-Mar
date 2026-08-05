@@ -36,6 +36,7 @@ const PIX_POLL_INTERVAL_MS = 4000;
 
 interface PixPayment {
   paymentId: number;
+  externalReference: string;
   qrCode: string;
   qrCodeBase64: string;
 }
@@ -159,7 +160,10 @@ export default function CheckoutModal({
 
     const interval = setInterval(async () => {
       try {
-        const status = await getPaymentStatus(pixPayment.paymentId);
+        const status = await getPaymentStatus(
+          pixPayment.paymentId,
+          pixPayment.externalReference,
+        );
         setPixStatus(status);
         if (status === "approved") {
           clearInterval(interval);
@@ -441,6 +445,7 @@ export default function CheckoutModal({
         // Pix: mostra o QR code aqui mesmo, sem sair da página.
         setPixPayment({
           paymentId: result.paymentId,
+          externalReference: result.externalReference,
           qrCode: result.qrCode,
           qrCodeBase64: result.qrCodeBase64,
         });

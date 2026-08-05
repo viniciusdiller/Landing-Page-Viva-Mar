@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 const SLIDE_INTERVAL_MS = 4500;
+// Distância mínima (em px) pra um arrasto no touch contar como swipe em vez
+// de só um toque tremido — evita trocar de foto sem querer.
+const SWIPE_THRESHOLD_PX = 40;
 
 interface RoomPhotoCarouselProps {
   images: string[];
@@ -25,6 +28,11 @@ export default function RoomPhotoCarousel({
 }: RoomPhotoCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  // Marca quando o último swipe aconteceu pra ignorar o "click" fantasma que
+  // o navegador dispara logo depois de um arrasto no touch (senão o swipe
+  // pra trocar de foto também abriria o lightbox sem querer).
+  const lastSwipeAtRef = useRef(0);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -74,13 +82,40 @@ export default function RoomPhotoCarousel({
   return (
     <>
       <div
-        className={`group relative w-full ${sizeClassName} overflow-hidden bg-gray-100 cursor-zoom-in ${className}`}
-        onClick={() => setLightboxOpen(true)}
+        className={`group relative w-full ${sizeClassName} overflow-hidden bg-gray-100 cursor-zoom-in touch-pan-y ${className}`}
+        onClick={() => {
+          if (Date.now() - lastSwipeAtRef.current < 300) return;
+          setLightboxOpen(true);
+        }}
         role="button"
         tabIndex={0}
         aria-label="Ampliar foto"
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") setLightboxOpen(true);
+        }}
+        onTouchStart={(event) => {
+          const touch = event.touches[0];
+          touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+        }}
+        onTouchEnd={(event) => {
+          const start = touchStartRef.current;
+          touchStartRef.current = null;
+          if (!start || images.length < 2) return;
+
+          const touch = event.changedTouches[0];
+          const deltaX = touch.clientX - start.x;
+          const deltaY = touch.clientY - start.y;
+
+          if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) < Math.abs(deltaY)) {
+            return;
+          }
+
+          lastSwipeAtRef.current = Date.now();
+          if (deltaX < 0) {
+            showNext();
+          } else {
+            showPrev();
+          }
         }}
       >
         {images.map((src, index) => (

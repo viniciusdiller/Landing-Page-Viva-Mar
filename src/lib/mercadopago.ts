@@ -26,10 +26,30 @@ function getAccessToken() {
   return token;
 }
 
+// Allowlist dos campos que o Payment Brick de fato devolve no onSubmit —
+// evita "mass assignment": sem isso, um POST forjado direto pra nossa rota
+// (sem passar pelo Brick) poderia injetar campos arbitrários da API de
+// pagamentos do Mercado Pago dentro de formData.
+const ALLOWED_FORM_DATA_FIELDS = new Set([
+  "token",
+  "issuer_id",
+  "payment_method_id",
+  "installments",
+  "payer",
+  "campaign_id",
+]);
+
+function pickAllowedFormData(formData: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(formData).filter(([key]) => ALLOWED_FORM_DATA_FIELDS.has(key)),
+  );
+}
+
 export interface CreatePaymentInput {
   // Corpo já pronto que veio do Payment Brick (token, payment_method_id,
   // installments, payer, etc.) — o formato varia por método de pagamento
-  // (cartão, Pix, boleto), então repassamos praticamente como veio.
+  // (cartão, Pix, boleto), então repassamos só os campos esperados (ver
+  // ALLOWED_FORM_DATA_FIELDS).
   formData: Record<string, unknown>;
   // Sobrescreve formData.transaction_amount: nunca confiamos no valor que o
   // Brick manda (roda no navegador, é alterável), sempre usamos o total
@@ -37,7 +57,7 @@ export interface CreatePaymentInput {
   transactionAmount: number;
   description: string;
   externalReference: string;
-  notificationUrl: string;
+  notificationUrl?: string;
   metadata?: Record<string, unknown>;
   // Fingerprint do navegador que o SDK do Mercado Pago coleta sozinho
   // (window.MP_DEVICE_SESSION_ID) assim que é carregado. Sem isso, o motor
@@ -51,10 +71,12 @@ export interface CreatePaymentInput {
 // O Mercado Pago recusa a criação do pagamento inteiro se notification_url
 // não for uma URL pública válida (ex.: http://localhost:3002/... em dev dá
 // "notificaction_url attribute must be url valid"). Em produção (https) isso
-// funciona normalmente; em dev local a gente simplesmente não informa —
-// confirmação de pagamento local só é possível com túnel (ngrok) ou deploy.
-function isPublicHttpsUrl(url: string) {
-  return url.startsWith("https://");
+// funciona normalmente; em dev local (ou se NEXT_PUBLIC_SITE_URL não estiver
+// configurada) a gente simplesmente não informa — o pagamento ainda é
+// processado normalmente, só o webhook de confirmação automática da reserva
+// não vai disparar (fica só como aviso no log do servidor).
+function isPublicHttpsUrl(url: string | undefined): url is string {
+  return Boolean(url && url.startsWith("https://"));
 }
 
 export interface MercadoPagoPaymentResult {
@@ -71,6 +93,12 @@ export interface MercadoPagoPaymentResult {
 export async function createPayment(
   input: CreatePaymentInput,
 ): Promise<MercadoPagoPaymentResult> {
+  if (!isPublicHttpsUrl(input.notificationUrl)) {
+    console.warn(
+      "MercadoPago: notification_url ausente ou não-https (configure NEXT_PUBLIC_SITE_URL) — o pagamento vai ser processado, mas o webhook não vai confirmar a reserva automaticamente.",
+    );
+  }
+
   const response = await fetch("https://api.mercadopago.com/v1/payments", {
     method: "POST",
     headers: {
@@ -82,7 +110,7 @@ export async function createPayment(
       ...(input.deviceId ? { "X-meli-session-id": input.deviceId } : {}),
     },
     body: JSON.stringify({
-      ...input.formData,
+      ...pickAllowedFormData(input.formData),
       transaction_amount: input.transactionAmount,
       description: input.description,
       external_reference: input.externalReference,
@@ -122,7 +150,7 @@ export interface CreatePreferenceInput {
   items: Array<{ title: string; quantity: number; unitPrice: number }>;
   payerEmail: string;
   externalReference: string;
-  notificationUrl: string;
+  notificationUrl?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -168,7 +196,13 @@ export async function createCheckoutPreference(
   return payload.id as string;
 }
 
+const NUMERIC_PAYMENT_ID = /^\d+$/;
+
 export async function getPayment(paymentId: string): Promise<MercadoPagoPayment> {
+  if (!NUMERIC_PAYMENT_ID.test(paymentId)) {
+    throw new Error("ID de pagamento inválido.");
+  }
+
   const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: {
       Authorization: `Bearer ${getAccessToken()}`,

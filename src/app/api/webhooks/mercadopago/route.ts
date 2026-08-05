@@ -1,6 +1,25 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getPayment } from "@/lib/mercadopago";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+
+// Mitigação local contra reservas duplicadas: o Mercado Pago pode reenviar
+// legitimamente a mesma notificação mais de uma vez, e mesmo com a
+// assinatura obrigatória (acima) um reenvio genuíno ainda pode chegar duas
+// vezes. Isso evita chamar confirmReservation() de novo pro mesmo
+// pagamento já processado nesta instância do servidor. Não substitui uma
+// constraint única por paymentId/externalReference no banco do Saas-Sancho
+// (essa sim é a defesa definitiva, e vale ainda mais em ambientes com
+// múltiplas instâncias) — é um reforço enquanto isso não existe lá.
+const processedPaymentIds = new Set<number>();
+const MAX_TRACKED_PAYMENT_IDS = 5000;
+
+function markProcessed(paymentId: number) {
+  if (processedPaymentIds.size >= MAX_TRACKED_PAYMENT_IDS) {
+    processedPaymentIds.clear();
+  }
+  processedPaymentIds.add(paymentId);
+}
 
 function getApiBaseUrl() {
   const baseUrl =
@@ -13,14 +32,20 @@ function getApiBaseUrl() {
   return baseUrl.replace(/\/$/, "");
 }
 
-// Validação opcional da assinatura x-signature — só roda se
-// MERCADOPAGO_WEBHOOK_SECRET estiver configurado (painel do Mercado Pago >
-// Suas integrações > Webhooks). Sem essa chave, seguimos confiando apenas na
-// re-consulta do pagamento via API (que já é a defesa principal: nunca
-// tratamos o status enviado no corpo do webhook como verdade).
+// Validação obrigatória da assinatura x-signature (painel do Mercado Pago >
+// Suas integrações > Webhooks > chave secreta). Sem essa validação, qualquer
+// pessoa não autenticada consegue chamar essa rota diretamente com um ID de
+// pagamento aprovado (nosso ou reaproveitado) e forçar a criação repetida de
+// reservas no Saas-Sancho — a re-consulta do status via API (mais abaixo)
+// impede FALSIFICAR um pagamento, mas sozinha não impede REPLAY.
 function isSignatureValid(request: NextRequest, paymentId: string): boolean {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+    console.error(
+      "MERCADOPAGO_WEBHOOK_SECRET não configurada — recusando webhook. Configure a chave secreta em Suas integrações > Webhooks no painel do Mercado Pago e defina MERCADOPAGO_WEBHOOK_SECRET no .env, senão reservas não vão mais ser confirmadas automaticamente.",
+    );
+    return false;
+  }
 
   const xSignature = request.headers.get("x-signature");
   const xRequestId = request.headers.get("x-request-id");
@@ -113,6 +138,7 @@ async function confirmReservation(metadata: Record<string, unknown>, paymentId: 
       guestCpf: metadata.guest_cpf || undefined,
       notes: buildReservationNotes(metadata, paymentId),
       ...(metadata.coupon_code ? { couponCode: metadata.coupon_code } : {}),
+      paymentReference: String(paymentId),
     }),
   });
 
@@ -127,6 +153,14 @@ async function confirmReservation(metadata: Record<string, unknown>, paymentId: 
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimit = checkRateLimit(getClientIp(request), "webhook-mercadopago", {
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfterSeconds);
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const body = await request.json().catch(() => ({}) as any);
@@ -166,19 +200,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (processedPaymentIds.has(payment.id)) {
+      return NextResponse.json(
+        { ok: true, paymentId: payment.id, message: "Pagamento já processado." },
+        { status: 200 },
+      );
+    }
+
     const reservation = await confirmReservation(payment.metadata, payment.id);
+    markProcessed(payment.id);
 
     return NextResponse.json(
       { ok: true, paymentId: payment.id, reservation },
       { status: 200 },
     );
   } catch (error) {
+    // Log detalhado só no servidor — a resposta é pública (qualquer um pode
+    // chamar essa rota diretamente), então não devolve detalhes internos.
     console.error("Erro ao processar webhook do Mercado Pago:", error);
     // Sempre 200 aqui: um 4xx/5xx faz o Mercado Pago reenviar a notificação
     // indefinidamente. O erro já foi logado para investigação manual.
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Erro desconhecido" },
-      { status: 200 },
-    );
+    return NextResponse.json({ ok: false, error: "Erro ao processar notificação." }, { status: 200 });
   }
 }

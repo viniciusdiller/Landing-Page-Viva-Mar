@@ -159,6 +159,10 @@ export interface ProcessPaymentResponse {
   status: string;
   statusDetail: string;
   paymentId: number;
+  // Token opaco gerado no servidor pra provar posse do pagamento — exigido
+  // como query param em GET /api/checkout/payment-status/[id] pra evitar
+  // que qualquer pessoa consulte o status de um pagamento alheio.
+  externalReference: string;
   qrCode: string | null;
   qrCodeBase64: string | null;
   ticketUrl: string | null;

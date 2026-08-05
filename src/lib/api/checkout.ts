@@ -61,11 +61,20 @@ export async function createCheckoutPreference(
   return (data as CreatePreferenceResponse).preferenceId;
 }
 
-/** Consulta o status atual de um pagamento (usado no polling do Pix). */
-export async function getPaymentStatus(paymentId: number): Promise<string> {
-  const response = await fetch(`/api/checkout/payment-status/${paymentId}`, {
-    cache: "no-store",
-  });
+/**
+ * Consulta o status atual de um pagamento (usado no polling do Pix).
+ * `externalReference` é o token de posse devolvido por processPayment —
+ * sem ele o servidor recusa a consulta (evita que qualquer pessoa consiga
+ * ver o status de pagamentos alheios só sabendo o ID numérico).
+ */
+export async function getPaymentStatus(
+  paymentId: number,
+  externalReference: string,
+): Promise<string> {
+  const response = await fetch(
+    `/api/checkout/payment-status/${paymentId}?token=${encodeURIComponent(externalReference)}`,
+    { cache: "no-store" },
+  );
 
   const data = await response.json().catch(() => null);
 

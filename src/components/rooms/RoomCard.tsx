@@ -5,6 +5,7 @@ import { BedDouble, ImageOff, Moon, Users } from "lucide-react";
 import type { RoomType } from "@/types";
 import { BED_TYPE_LABELS } from "@/types";
 import { formatBRL } from "@/lib/booking";
+import RoomPhotoCarousel from "@/components/RoomPhotoCarousel";
 
 interface RoomCardProps {
   room: RoomType;
@@ -20,7 +21,7 @@ function AvailabilityBadge({ available }: { available: boolean }) {
 }
 
 export default function RoomCard({ room, detailHref }: RoomCardProps) {
-  const primaryPhoto = room.photoUrls[0] ?? room.images[0] ?? null;
+  const photos = room.images.length > 0 ? room.images : room.photoUrls;
   const ctaLabel = room.available ? "Reservar" : "Consultar";
   const capacityLabel = `${room.maxOccupancy} ${room.maxOccupancy === 1 ? "hóspede" : "hóspedes"}`;
   const minimumStayNights = Math.max(room.minStayNights ?? 0, room.minStayDays ?? 0);
@@ -28,13 +29,12 @@ export default function RoomCard({ room, detailHref }: RoomCardProps) {
   return (
     <article className="card flex h-full flex-col overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="relative aspect-[4/3] bg-[linear-gradient(135deg,#dde3e8_0%,#f8fafc_100%)]">
-        {primaryPhoto ? (
-          <img
-            src={primaryPhoto}
+        {photos.length > 0 ? (
+          <RoomPhotoCarousel
+            images={photos}
             alt={room.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
+            sizeClassName="h-full"
+            className="h-full"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center gap-3 text-[var(--color-text-muted)]">
@@ -43,7 +43,7 @@ export default function RoomCard({ room, detailHref }: RoomCardProps) {
           </div>
         )}
 
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4 pointer-events-none">
           <AvailabilityBadge available={room.available} />
         </div>
       </div>

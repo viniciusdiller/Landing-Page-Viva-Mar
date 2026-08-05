@@ -1,21 +1,26 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { createCheckoutPreference } from "@/lib/mercadopago";
+import { computeAuthoritativePrice, PricingError } from "@/lib/pricing";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 import type { CreatePreferenceRequest } from "@/types";
 
-function getSiteUrl() {
+function getSiteUrl(): string | null {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-
-  if (!siteUrl) {
-    throw new Error(
-      "Defina NEXT_PUBLIC_SITE_URL para gerar a URL de notificação do Mercado Pago.",
-    );
-  }
-
-  return siteUrl.replace(/\/$/, "");
+  return siteUrl ? siteUrl.replace(/\/$/, "") : null;
 }
 
+const PRICE_TOLERANCE_BRL = 0.01;
+
 export async function POST(request: Request) {
+  const rateLimit = checkRateLimit(getClientIp(request), "create-preference", {
+    limit: 8,
+    windowMs: 60_000,
+  });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfterSeconds);
+  }
+
   try {
     const { booking } = (await request.json()) as CreatePreferenceRequest;
 
@@ -23,8 +28,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dados de reserva incompletos." }, { status: 400 });
     }
 
-    if (!Number.isFinite(booking.total) || booking.total <= 0) {
-      return NextResponse.json({ error: "Valor da reserva inválido." }, { status: 400 });
+    // Mesma revalidação de preço da rota de pagamento direto — essa
+    // preferência também pode ser usada pra cobrar via carteira Mercado
+    // Pago, então não pode confiar no total calculado no navegador.
+    let authoritativePrice;
+    try {
+      authoritativePrice = await computeAuthoritativePrice(booking);
+    } catch (pricingError) {
+      if (pricingError instanceof PricingError) {
+        return NextResponse.json({ error: pricingError.message }, { status: 409 });
+      }
+      throw pricingError;
+    }
+
+    if (
+      Math.abs(authoritativePrice.total - Number(booking.total)) > PRICE_TOLERANCE_BRL
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "O valor da reserva mudou. Atualize a página e tente novamente.",
+        },
+        { status: 409 },
+      );
     }
 
     const siteUrl = getSiteUrl();
@@ -35,12 +61,12 @@ export async function POST(request: Request) {
         {
           title: `${booking.roomName} — ${booking.nights} noite(s)`,
           quantity: 1,
-          unitPrice: Number(booking.total.toFixed(2)),
+          unitPrice: Number(authoritativePrice.total.toFixed(2)),
         },
       ],
       payerEmail: booking.guest.email,
       externalReference,
-      notificationUrl: `${siteUrl}/api/webhooks/mercadopago`,
+      notificationUrl: siteUrl ? `${siteUrl}/api/webhooks/mercadopago` : undefined,
       metadata: {
         room_id: booking.roomId,
         room_name: booking.roomName,
@@ -66,7 +92,7 @@ export async function POST(request: Request) {
             .filter((pkg) => pkg.quantity > 0)
             .map((pkg) => ({ name: pkg.name, quantity: pkg.quantity, price: pkg.price })),
         ),
-        total: booking.total,
+        total: authoritativePrice.total,
       },
     });
 
@@ -74,9 +100,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Erro ao criar preferência do Mercado Pago:", error);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Falha ao criar preferência de pagamento",
-      },
+      { error: "Não foi possível preparar o pagamento. Tente novamente." },
       { status: 500 },
     );
   }
