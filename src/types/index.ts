@@ -181,52 +181,6 @@ export interface CreatePreferenceResponse {
   preferenceId: string;
 }
 
-// --- STATUS DO PAGAMENTO ---
-export type PaymentStatus =
-  | "pending"
-  | "approved"
-  | "in_process"
-  | "rejected"
-  | "cancelled"
-  | "refunded";
-
-// --- PAYLOAD ENVIADO PARA A API INTERNA ANTES/APÓS MERCADO PAGO ---
-// Enviado para POST /api/bookings/create
-export interface CreateBookingPayload {
-  // Dados do quarto / propriedade
-  roomId: string;
-  propertyId?: string;
-
-  // Período
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-
-  // Hóspedes
-  guestCount: number;
-  guest: GuestData;
-
-  // Valores
-  pricePerNight: number;
-  subtotal: number;
-  discountCode: string | null;
-  discountAmount: number;
-  packages: SelectedPackage[]; // pacotes/adicionais selecionados
-  packagesTotal: number; // valor total dos pacotes
-  total: number; // valor final cobrado em BRL
-
-  // Pagamento
-  paymentStatus: PaymentStatus;
-  // O externalPaymentId é preenchido após confirmação do Mercado Pago
-  externalPaymentId?: string; // preference_id ou payment_id do MP
-  paymentMethod?: "pix" | "credit_card" | "debit_card";
-
-  // Metadados
-  source: "landing_page" | "admin" | "channel_manager";
-  createdAt: string; // ISO timestamp
-}
-
-
 // --- PACOTES / ADICIONAIS ---
 export interface Package {
   id: string;
@@ -241,16 +195,6 @@ export interface PublicAddonApiItem {
   name: string;
   description: string | null;
   price: number;
-}
-
-// --- COUPON / DESCONTO ---
-export interface DiscountCoupon {
-  code: string;
-  type: "percentage" | "fixed";
-  value: number; // % ou BRL
-  minNights?: number;
-  validUntil?: string;
-  description: string;
 }
 
 // --- PACOTES SELECIONADOS NA RESERVA ---
