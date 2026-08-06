@@ -109,15 +109,34 @@ export default function Footer() {
           </div>
         </div>
 
-        <div
-          className="pt-5 border-t border-[var(--color-border)] text-[var(--color-text-faint)] flex items-center justify-between gap-4"
-          style={{ fontSize: "var(--text-xs)" }}
-        >
-          <span>
-            © {new Date().getFullYear()} Pousada Viva Mar. Powered by
-            contatototalsoftware@gmail.com
-          </span>
-        </div>
+        <section className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-0 pt-6 border-t border-[var(--color-border)]">
+          <div
+            className="text-[var(--color-text-faint)] text-center md:text-left"
+            style={{ fontSize: "var(--text-xs)" }}
+          >
+            © {new Date().getFullYear()} Pousada Viva Mar. Todos os direitos
+            reservados.
+          </div>
+
+          <a
+            href="https://totalsoftware.com.br/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity"
+          >
+            <span
+              style={{ fontSize: "var(--text-xs)" }}
+              className="text-[var(--color-text-gray)]"
+            >
+              Desenvolvido por
+            </span>
+            <img
+              src="/total-software.png"
+              alt="Total Software"
+              className="h-6 w-auto"
+            />
+          </a>
+        </section>
       </div>
     </footer>
   );
