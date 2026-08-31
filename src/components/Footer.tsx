@@ -74,7 +74,13 @@ export default function Footer() {
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={14} /> atendimento@vivamarpousada.com.br
+                <a
+                  href="mailto:pousadavivamarsaqua@gmail.com"
+                  className="flex items-center gap-2 hover:opacity-80 hover:cursor-pointer transition-opacity"
+                >
+                  <Mail size={14} />
+                  pousadavivamarsaqua@gmail.com
+                </a>
               </li>
             </ul>
           </div>
