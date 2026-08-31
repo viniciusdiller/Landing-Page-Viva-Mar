@@ -277,20 +277,39 @@ export default function RoomDetailPage() {
                 </span>
               </div>
 
-              <p className="text-sm text-[var(--color-text-muted)] mb-6">
-                {!hasDates
-                  ? "Selecione as datas para continuar"
-                  : hasDateError
-                    ? "Ajuste as datas selecionadas"
-                    : room.available
-                      ? "Disponível para reserva"
-                      : "Sem disponibilidade no período selecionado"}
-              </p>
+              {(() => {
+                const belowMinimumStay =
+                  hasDates && !hasDateError && nights < minimumStayNights;
+
+                return (
+                  <p
+                    className={`text-sm mb-6 ${
+                      belowMinimumStay
+                        ? "text-amber-700"
+                        : "text-[var(--color-text-muted)]"
+                    }`}
+                  >
+                    {!hasDates
+                      ? "Selecione as datas para continuar"
+                      : hasDateError
+                        ? "Ajuste as datas selecionadas"
+                        : belowMinimumStay
+                          ? `Essas datas só possuem disponibilidade a partir de ${minimumStayNights} noites.`
+                          : room.available
+                            ? "Disponível para reserva"
+                            : "Sem disponibilidade no período selecionado"}
+                  </p>
+                );
+              })()}
 
               <button
                 type="button"
                 className="btn btn-primary w-full justify-center disabled:opacity-50 disabled:pointer-events-none"
-                disabled={hasDateError || !room.available}
+                disabled={
+                  hasDateError ||
+                  !room.available ||
+                  (hasDates && nights < minimumStayNights)
+                }
                 onClick={() => setCheckoutOpen(true)}
               >
                 {room.available ? "Reservar" : "Consultar"}

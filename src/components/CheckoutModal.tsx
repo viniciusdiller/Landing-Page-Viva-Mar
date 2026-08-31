@@ -353,7 +353,7 @@ export default function CheckoutModal({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: couponInput.trim() }),
+          body: JSON.stringify({ code: couponInput.trim(), checkIn }),
         },
       );
 

@@ -34,13 +34,13 @@ function getViaMarApiBaseUrl() {
   return baseUrl.replace(/\/$/, "");
 }
 
-async function fetchDiscountPercentage(code: string): Promise<number> {
+async function fetchDiscountPercentage(code: string, checkIn: string): Promise<number> {
   const baseUrl = getViaMarApiBaseUrl();
 
   const response = await fetch(`${baseUrl}/api/public/viva-mar/validate-coupon`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, checkIn }),
     cache: "no-store",
   });
 
@@ -111,7 +111,7 @@ export async function computeAuthoritativePrice(
     }, 0);
 
   const discountPercentage = booking.discountCode
-    ? await fetchDiscountPercentage(booking.discountCode)
+    ? await fetchDiscountPercentage(booking.discountCode, booking.checkIn)
     : 0;
   const discountAmount = (subtotal * discountPercentage) / 100;
 
