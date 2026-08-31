@@ -1,7 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
+
+// Sem isso, o navegador do celular renderiza a página numa largura virtual
+// de desktop (~980px) e espreme tudo pra caber na tela — os breakpoints
+// responsivos do Tailwind (sm/md/lg) nem disparam certo nesse cenário,
+// porque o CSS enxerga uma viewport bem maior que a tela real.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
