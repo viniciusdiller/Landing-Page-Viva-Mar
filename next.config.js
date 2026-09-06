@@ -21,14 +21,24 @@ const csp = [
   // 'unsafe-inline' é necessário pro Payment Brick do Mercado Pago (injeta
   // estilos/scripts inline) — não há como restringir mais sem quebrar o
   // checkout. Reavalie se o SDK deles passar a suportar nonces.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.mercadopago.com https://sdk.mercadopago.com https://secure.mlstatic.com`,
+  // https://http2.mlstatic.com serve o bundle real do Payment Brick
+  // (components/payment.js) e o i18n dele — sem isso na whitelist o
+  // script é bloqueado pelo próprio browser e o Brick falha ao inicializar
+  // (Bricks.create: Bricks component initialization failed), deixando o
+  // container do formulário de pagamento vazio, sem nenhum método visível.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.mercadopago.com https://sdk.mercadopago.com https://secure.mlstatic.com https://http2.mlstatic.com`,
   `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
   `font-src 'self' https://fonts.gstatic.com`,
   // data: cobre o QR code do Pix (vem em base64); o restante são domínios
   // conhecidos de onde as fotos podem vir.
   `img-src 'self' data: blob: https: ${apiOrigin}`.trim(),
-  `connect-src 'self' https://api.mercadopago.com https://viacep.com.br ${apiOrigin}`.trim(),
-  `frame-src 'self' https://www.mercadopago.com https://www.google.com`,
+  // http2.mlstatic.com: mesmo bundle acima também busca o JSON de i18n via
+  // fetch. api.mercadolibre.com/www.mercadolibre.com: telemetria de
+  // antifraude que o Brick dispara sozinho (device fingerprint) — não é
+  // crítico pro brick renderizar, mas sem isso o console fica poluído de
+  // violação de CSP a cada tentativa.
+  `connect-src 'self' https://api.mercadopago.com https://viacep.com.br https://http2.mlstatic.com https://api.mercadolibre.com https://www.mercadolibre.com ${apiOrigin}`.trim(),
+  `frame-src 'self' https://www.mercadopago.com https://www.mercadolibre.com https://www.google.com`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
