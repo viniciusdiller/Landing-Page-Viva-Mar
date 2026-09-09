@@ -37,8 +37,15 @@ const csp = [
   // antifraude que o Brick dispara sozinho (device fingerprint) — não é
   // crítico pro brick renderizar, mas sem isso o console fica poluído de
   // violação de CSP a cada tentativa.
-  `connect-src 'self' https://api.mercadopago.com https://viacep.com.br https://http2.mlstatic.com https://api.mercadolibre.com https://www.mercadolibre.com ${apiOrigin}`.trim(),
-  `frame-src 'self' https://www.mercadopago.com https://www.mercadolibre.com https://www.google.com`,
+  // secure-fields.mercadopago.com / api-static.mercadopago.com: o próprio
+  // script do Brick (rodando na nossa página, não dentro do iframe) chama
+  // esses domínios pra orquestrar os campos seguros de cartão (BIN lookup,
+  // etc.) — sem eles na whitelist, essas chamadas são bloqueadas e o Brick
+  // quebra com "Cannot read properties of undefined (reading 'message')",
+  // deixando o formulário de cartão preso no esqueleto de carregamento pra
+  // sempre (reproduzido no mobile, mas afeta qualquer tela).
+  `connect-src 'self' https://api.mercadopago.com https://viacep.com.br https://http2.mlstatic.com https://api.mercadolibre.com https://www.mercadolibre.com https://secure-fields.mercadopago.com https://api-static.mercadopago.com ${apiOrigin}`.trim(),
+  `frame-src 'self' https://www.mercadopago.com https://www.mercadolibre.com https://www.google.com https://secure-fields.mercadopago.com`,
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
