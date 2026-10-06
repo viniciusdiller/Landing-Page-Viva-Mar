@@ -118,6 +118,12 @@ export default function CheckoutModal({
   // mais ser aplicada — trocar o preferenceId nesse ponto remontaria o
   // Brick já em uso e reproduziria o bug do painel duplicado.
   const preferenceGivenUpRef = useRef(false);
+  // O Payment Brick monta de forma assíncrona; se ele é desmontado/remontado
+  // rápido demais (key mudando), a montagem antiga termina depois e o
+  // formulário aparece duplicado no mesmo container. Por isso só montamos o
+  // Brick depois que a configuração ficou estável, deixando um intervalo
+  // sem Brick na tela pra o anterior ser destruído por completo.
+  const [mountedBrickKey, setMountedBrickKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -291,6 +297,16 @@ export default function CheckoutModal({
     checkIn,
     checkOut,
   ]);
+
+  const brickKey = `${total}-${preferenceId ?? "no-wallet"}`;
+  const brickWanted = guestFieldsComplete && preferenceAttempted;
+
+  useEffect(() => {
+    setMountedBrickKey(null);
+    if (!brickWanted) return;
+    const t = setTimeout(() => setMountedBrickKey(brickKey), 700);
+    return () => clearTimeout(t);
+  }, [brickWanted, brickKey]);
 
   if (!open || !room) return null;
 
@@ -482,7 +498,7 @@ export default function CheckoutModal({
   }
 
   const inputClassName =
-    "w-full rounded-lg border border-gray-300 bg-white px-4 py-3.5 text-[15px] text-gray-900 outline-none transition-colors focus:border-black placeholder:text-gray-400";
+    "w-full rounded-lg border border-gray-300 bg-white px-4 py-3.5 min-w-0 text-base sm:text-[15px] text-gray-900 outline-none transition-colors focus:border-black placeholder:text-gray-400";
 
   const roomThumb = room.images[0];
 
@@ -791,9 +807,10 @@ export default function CheckoutModal({
                         : "Aguardando pagamento... Assim que for identificado, sua reserva é confirmada automaticamente."}
                     </p>
                   </div>
-                ) : guestFieldsComplete && preferenceAttempted ? (
+                ) : brickWanted && mountedBrickKey === brickKey ? (
+                  <div className="payment-brick-wrapper">
                   <Payment
-                    key={`${total}-${preferenceId ?? "no-wallet"}`}
+                    key={brickKey}
                     initialization={{
                       amount: total,
                       payer: { email: guest.email },
@@ -813,6 +830,7 @@ export default function CheckoutModal({
                       console.error("Erro no Payment Brick:", error);
                     }}
                   />
+                  </div>
                 ) : guestFieldsComplete ? (
                   <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-500">
                     <Loader2 size={16} className="animate-spin" />

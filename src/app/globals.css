@@ -88,6 +88,11 @@ html {
   scroll-padding-top: 5rem;
   background-color: var(--color-bg);
   overscroll-behavior-y: none;
+  /* Mobile-first: nada pode empurrar a página pros lados (o "balanço" ao
+     arrastar o dedo). clip não cria contexto de scroll, então não quebra
+     position: sticky. */
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
   scrollbar-color: oklch(0.35 0.02 95 / 0.25) transparent;
   scrollbar-width: thin;
 }
@@ -109,6 +114,9 @@ html {
 
 body {
   min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   line-height: 1.6;
   font-family: var(--font-body);
   font-size: var(--text-base);
@@ -134,6 +142,22 @@ p, li { text-wrap: pretty; }
 .checkout-page h6 {
   font-family: var(--font-body);
 }
+
+.checkout-page {
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Campos com menos de 16px fazem o iOS dar zoom ao focar, o que também
+   desloca a página pros lados. */
+@media (max-width: 639px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* Payment Brick: se o SDK montar o formulário mais de uma vez no mesmo
+   container (remontagem rápida / StrictMode), mostra só o primeiro. */
+.payment-brick-wrapper { max-width: 100%; overflow-x: hidden; }
+.payment-brick-wrapper > *:not(:first-child) { display: none !important; }
 
 ::selection {
   background: oklch(from #bd9a5f l c h / 0.25);
