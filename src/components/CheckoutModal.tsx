@@ -652,26 +652,26 @@ export default function CheckoutModal({
               Detalhes da estadia
             </h2>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <label className="block">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 sm:gap-4 mb-4">
+              <label className="block min-w-0">
                 <span className="text-xs text-gray-500">Check-in</span>
                 <input
                   type="date"
                   min={todayISO}
                   value={checkIn}
                   onChange={(e) => setCheckIn(e.target.value)}
-                  className={`${inputClassName} mt-1 cursor-pointer`}
+                  className={`${inputClassName} mt-1 cursor-pointer appearance-none max-w-full px-3 sm:px-4 [&::-webkit-date-and-time-value]:text-left`}
                   aria-invalid={hasDateError}
                 />
               </label>
-              <label className="block">
+              <label className="block min-w-0">
                 <span className="text-xs text-gray-500">Check-out</span>
                 <input
                   type="date"
                   min={checkIn || todayISO}
                   value={checkOut}
                   onChange={(e) => setCheckOut(e.target.value)}
-                  className={`${inputClassName} mt-1 cursor-pointer ${
+                  className={`${inputClassName} mt-1 cursor-pointer appearance-none max-w-full px-3 sm:px-4 [&::-webkit-date-and-time-value]:text-left ${
                     hasDateError ? "border-red-400 text-red-600" : ""
                   }`}
                   aria-invalid={hasDateError}
