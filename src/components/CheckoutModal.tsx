@@ -777,6 +777,7 @@ export default function CheckoutModal({
           {/* Pagamento */}
           <section className="mt-10 pt-10 border-t border-gray-100">
             <h2 className="text-xl font-semibold text-gray-900 mb-1">Pagamento</h2>
+            <p className="mb-4 text-sm text-gray-600">Após a aprovação do pagamento e confirmação da reserva, enviaremos o código e o voucher para o e-mail informado. Consulte sua estadia em “Minhas reservas”.</p>
             <p className="text-sm text-gray-500 mb-6">
               Todas as transações são seguras e criptografadas.
             </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import GuestPortalModal from "@/components/GuestPortalModal";
 import { Menu, X } from "lucide-react";
 
 const SCROLL_THRESHOLD = 60;
@@ -32,6 +33,7 @@ function WaveMark() {
 }
 
 export default function Header() {
+  const [guestOpen, setGuestOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -56,6 +58,8 @@ export default function Header() {
   ];
 
   return (
+    <>
+    {guestOpen && <GuestPortalModal onClose={() => setGuestOpen(false)} />}
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         solid
@@ -124,6 +128,9 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <button type="button" onClick={() => { setGuestOpen(true); setMenuOpen(false); }} className={`rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${solid ? 'border-blue-700 text-blue-800 hover:bg-blue-50' : 'border-white/70 text-white hover:bg-white/15'}`}>
+              Minhas reservas
+            </button>
             <a
               href="#quartos"
               className="hidden lg:inline-flex h-10 px-6 items-center justify-center rounded-sm font-semibold uppercase tracking-[0.14em] text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition-colors"
@@ -175,5 +182,6 @@ export default function Header() {
         )}
       </div>
     </header>
+    </>
   );
 }

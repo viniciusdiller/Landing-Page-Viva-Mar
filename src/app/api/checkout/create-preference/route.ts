@@ -2,8 +2,13 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { createCheckoutPreference } from "@/lib/mercadopago";
 import { computeAuthoritativePrice, PricingError } from "@/lib/pricing";
-import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
-import type { CreatePreferenceRequest } from "@/types";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import { validateBookingPayload } from "@/lib/validators";
+import type { CreatePreferenceRequest, CheckoutSessionRequest } from "@/types";
 
 function getSiteUrl(): string | null {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -13,36 +18,63 @@ function getSiteUrl(): string | null {
 const PRICE_TOLERANCE_BRL = 0.01;
 
 export async function POST(request: Request) {
-  const rateLimit = checkRateLimit(getClientIp(request), "create-preference", {
-    limit: 8,
-    windowMs: 60_000,
+  const clientIp = getClientIp(request);
+  const ipLimit = checkRateLimit(clientIp, "create-preference-ip", {
+    limit: 10,
+    windowMs: 300_000,
   });
-  if (!rateLimit.allowed) {
-    return rateLimitResponse(rateLimit.retryAfterSeconds);
+  if (!ipLimit.allowed) {
+    return rateLimitResponse(ipLimit, "Muitas tentativas de criação de checkout. Aguarde alguns minutos.");
   }
 
   try {
-    const { booking } = (await request.json()) as CreatePreferenceRequest;
-
-    if (!booking?.roomId || !booking.checkIn || !booking.checkOut || !booking.guest?.email) {
-      return NextResponse.json({ error: "Dados de reserva incompletos." }, { status: 400 });
+    const rawBody = await request.json().catch(() => null);
+    if (!rawBody || typeof rawBody !== "object") {
+      return NextResponse.json(
+        { error: "Payload da requisição inválido." },
+        { status: 400 },
+      );
     }
 
-    // Mesma revalidação de preço da rota de pagamento direto — essa
-    // preferência também pode ser usada pra cobrar via carteira Mercado
-    // Pago, então não pode confiar no total calculado no navegador.
+    const { booking: rawBooking } = rawBody as CreatePreferenceRequest;
+    const validation = validateBookingPayload(rawBooking);
+    if (!validation.valid || !validation.sanitized) {
+      return NextResponse.json(
+        { error: validation.error || "Dados de reserva inválidos." },
+        { status: 400 },
+      );
+    }
+
+    const booking = validation.sanitized as CheckoutSessionRequest;
+
+    const emailLimit = checkRateLimit(
+      booking.guest.email,
+      "create-preference-email",
+      {
+        limit: 10,
+        windowMs: 300_000,
+      },
+    );
+    if (!emailLimit.allowed) {
+      return rateLimitResponse(emailLimit, "Limite de checkouts para este e-mail atingido. Aguarde alguns minutos.");
+    }
+
     let authoritativePrice;
     try {
       authoritativePrice = await computeAuthoritativePrice(booking);
     } catch (pricingError) {
       if (pricingError instanceof PricingError) {
-        return NextResponse.json({ error: pricingError.message }, { status: 409 });
+        return NextResponse.json(
+          { error: pricingError.message },
+          { status: 409 },
+        );
       }
       throw pricingError;
     }
 
     if (
-      Math.abs(authoritativePrice.total - Number(booking.total)) > PRICE_TOLERANCE_BRL
+      Math.abs(authoritativePrice.total - Number(booking.total)) >
+      PRICE_TOLERANCE_BRL
     ) {
       return NextResponse.json(
         {
@@ -66,7 +98,9 @@ export async function POST(request: Request) {
       ],
       payerEmail: booking.guest.email,
       externalReference,
-      notificationUrl: siteUrl ? `${siteUrl}/api/webhooks/mercadopago` : undefined,
+      notificationUrl: siteUrl
+        ? `${siteUrl}/api/webhooks/mercadopago`
+        : undefined,
       metadata: {
         room_id: booking.roomId,
         room_name: booking.roomName,
@@ -88,9 +122,13 @@ export async function POST(request: Request) {
         special_requests: booking.guest.specialRequests || "",
         coupon_code: booking.discountCode || "",
         packages_json: JSON.stringify(
-          booking.packages
+          (booking.packages || [])
             .filter((pkg) => pkg.quantity > 0)
-            .map((pkg) => ({ name: pkg.name, quantity: pkg.quantity, price: pkg.price })),
+            .map((pkg) => ({
+              name: pkg.name,
+              quantity: pkg.quantity,
+              price: pkg.price,
+            })),
         ),
         total: authoritativePrice.total,
       },
