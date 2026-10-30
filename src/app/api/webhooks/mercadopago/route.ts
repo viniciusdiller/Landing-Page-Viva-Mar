@@ -58,7 +58,10 @@ function isSignatureValid(request: NextRequest, paymentId: string): boolean {
     }),
   );
 
-  if (!parts.ts || !parts.v1) return false;
+  if (!parts.ts || !parts.v1 || !/^\d+$/.test(parts.ts)) return false;
+  const rawTs = Number(parts.ts);
+  const timestampMs = rawTs < 1e12 ? rawTs * 1000 : rawTs;
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 10 * 60_000) return false;
 
   const manifest = `id:${paymentId.toLowerCase()};request-id:${xRequestId};ts:${parts.ts};`;
   const expected = createHmac("sha256", secret).update(manifest).digest("hex");
@@ -127,7 +130,7 @@ async function confirmReservation(metadata: Record<string, unknown>, paymentId: 
 
   const response = await fetch(`${baseUrl}/api/public/viva-mar`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(process.env.RESERVATION_API_SECRET ? { Authorization: `Bearer ${process.env.RESERVATION_API_SECRET}` } : {}) },
     body: JSON.stringify({
       roomId: metadata.room_id,
       checkIn: metadata.check_in,
@@ -218,8 +221,7 @@ export async function POST(request: NextRequest) {
     // Log detalhado só no servidor — a resposta é pública (qualquer um pode
     // chamar essa rota diretamente), então não devolve detalhes internos.
     console.error("Erro ao processar webhook do Mercado Pago:", error);
-    // Sempre 200 aqui: um 4xx/5xx faz o Mercado Pago reenviar a notificação
-    // indefinidamente. O erro já foi logado para investigação manual.
-    return NextResponse.json({ ok: false, error: "Erro ao processar notificação." }, { status: 200 });
+    // A transient failure must be retried: backend deduplicates by payment ID.
+    return NextResponse.json({ ok: false, error: "Erro ao processar notificação." }, { status: 503 });
   }
 }

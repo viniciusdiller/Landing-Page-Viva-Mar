@@ -2,54 +2,89 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { createPayment } from "@/lib/mercadopago";
 import { computeAuthoritativePrice, PricingError } from "@/lib/pricing";
-import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
-import type { ProcessPaymentRequest } from "@/types";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import { validateBookingPayload, sanitizeString } from "@/lib/validators";
+import type { ProcessPaymentRequest, CheckoutSessionRequest } from "@/types";
 
 function getSiteUrl(): string | null {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   return siteUrl ? siteUrl.replace(/\/$/, "") : null;
 }
 
-// Tolerância pra diferenças de arredondamento entre o total exibido no
-// front (calculado com os mesmos dados, só que possivelmente já um pouco
-// desatualizado) e o total autoritativo recalculado agora no servidor.
 const PRICE_TOLERANCE_BRL = 0.01;
 
 export async function POST(request: Request) {
-  const rateLimit = checkRateLimit(getClientIp(request), "process-payment", {
-    limit: 8,
-    windowMs: 60_000,
+  const clientIp = getClientIp(request);
+  const ipLimit = checkRateLimit(clientIp, "process-payment-ip", {
+    limit: 5,
+    windowMs: 300_000,
   });
-  if (!rateLimit.allowed) {
-    return rateLimitResponse(rateLimit.retryAfterSeconds);
+  if (!ipLimit.allowed) {
+    return rateLimitResponse(ipLimit, "Muitas tentativas de pagamento para este IP. Aguarde alguns minutos.");
   }
 
   try {
-    const { formData, booking, deviceId } = (await request.json()) as ProcessPaymentRequest;
-
-    if (!booking?.roomId || !booking.checkIn || !booking.checkOut || !booking.guest?.email) {
-      return NextResponse.json({ error: "Dados de reserva incompletos." }, { status: 400 });
+    const rawBody = await request.json().catch(() => null);
+    if (!rawBody || typeof rawBody !== "object") {
+      return NextResponse.json(
+        { error: "Payload da requisição inválido." },
+        { status: 400 },
+      );
     }
 
-    if (!formData || typeof formData !== "object") {
-      return NextResponse.json({ error: "Dados de pagamento ausentes." }, { status: 400 });
+    const { formData, booking: rawBooking, deviceId: rawDeviceId } =
+      rawBody as ProcessPaymentRequest;
+
+    const validation = validateBookingPayload(rawBooking);
+    if (!validation.valid || !validation.sanitized) {
+      return NextResponse.json(
+        { error: validation.error || "Dados de reserva inválidos." },
+        { status: 400 },
+      );
     }
 
-    // Nunca confiamos no total calculado no navegador — recalcula tudo a
-    // partir do preço real do quarto/pacotes/cupom no Saas-Sancho, e é esse
-    // valor (não o que o cliente mandou) que efetivamente é cobrado.
+    const booking = validation.sanitized as CheckoutSessionRequest;
+    const deviceId = rawDeviceId ? sanitizeString(rawDeviceId, 100) : undefined;
+
+    const emailLimit = checkRateLimit(
+      booking.guest.email,
+      "process-payment-email",
+      {
+        limit: 5,
+        windowMs: 300_000,
+      },
+    );
+    if (!emailLimit.allowed) {
+      return rateLimitResponse(emailLimit, "Limite de tentativas de pagamento atingido para este e-mail. Aguarde alguns minutos.");
+    }
+
+    if (!formData || typeof formData !== "object" || Array.isArray(formData)) {
+      return NextResponse.json(
+        { error: "Dados de pagamento ausentes ou inválidos." },
+        { status: 400 },
+      );
+    }
+
     let authoritativePrice;
     try {
       authoritativePrice = await computeAuthoritativePrice(booking);
     } catch (pricingError) {
       if (pricingError instanceof PricingError) {
-        return NextResponse.json({ error: pricingError.message }, { status: 409 });
+        return NextResponse.json(
+          { error: pricingError.message },
+          { status: 409 },
+        );
       }
       throw pricingError;
     }
 
     if (
-      Math.abs(authoritativePrice.total - Number(booking.total)) > PRICE_TOLERANCE_BRL
+      Math.abs(authoritativePrice.total - Number(booking.total)) >
+      PRICE_TOLERANCE_BRL
     ) {
       return NextResponse.json(
         {
@@ -68,7 +103,9 @@ export async function POST(request: Request) {
       transactionAmount: Number(authoritativePrice.total.toFixed(2)),
       description: `${booking.roomName} — ${booking.nights} noite(s)`,
       externalReference,
-      notificationUrl: siteUrl ? `${siteUrl}/api/webhooks/mercadopago` : undefined,
+      notificationUrl: siteUrl
+        ? `${siteUrl}/api/webhooks/mercadopago`
+        : undefined,
       deviceId,
       metadata: {
         room_id: booking.roomId,
@@ -91,9 +128,13 @@ export async function POST(request: Request) {
         special_requests: booking.guest.specialRequests || "",
         coupon_code: booking.discountCode || "",
         packages_json: JSON.stringify(
-          booking.packages
+          (booking.packages || [])
             .filter((pkg) => pkg.quantity > 0)
-            .map((pkg) => ({ name: pkg.name, quantity: pkg.quantity, price: pkg.price })),
+            .map((pkg) => ({
+              name: pkg.name,
+              quantity: pkg.quantity,
+              price: pkg.price,
+            })),
         ),
         total: authoritativePrice.total,
       },
@@ -112,9 +153,6 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    // Log detalhado só no servidor — o cliente recebe uma mensagem genérica
-    // pra não vazar detalhes internos (config, infraestrutura, respostas
-    // cruas do Mercado Pago).
     console.error("Erro ao processar pagamento:", error);
     return NextResponse.json(
       { error: "Não foi possível processar o pagamento. Tente novamente." },
