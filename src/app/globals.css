@@ -139,7 +139,14 @@ p, li { text-wrap: pretty; }
 .checkout-page h3,
 .checkout-page h4,
 .checkout-page h5,
-.checkout-page h6 {
+.checkout-page h6,
+.guest-portal-modal,
+.guest-portal-modal h1,
+.guest-portal-modal h2,
+.guest-portal-modal h3,
+.guest-portal-modal h4,
+.guest-portal-modal h5,
+.guest-portal-modal h6 {
   font-family: var(--font-body);
 }
 

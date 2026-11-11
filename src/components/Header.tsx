@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
 import { useGuest } from "@/lib/guest-context";
 
 const SCROLL_THRESHOLD = 60;
@@ -33,7 +33,7 @@ function WaveMark() {
 }
 
 export default function Header() {
-  const { openPortal } = useGuest();
+  const { isAuthenticated, openPortal } = useGuest();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -129,24 +129,26 @@ export default function Header() {
             <button
               type="button"
               onClick={openPortal}
-              className={`inline-flex h-10 px-4 items-center justify-center rounded-sm font-semibold uppercase tracking-[0.12em] transition-colors border ${
+              className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium shadow-sm backdrop-blur-sm transition-all duration-200 active:scale-95 cursor-pointer ${
                 solid
-                  ? "border-[#bd9a5f] text-[#a8843f] hover:bg-[#f1e6cf]/40"
-                  : "border-white/80 text-white hover:bg-white/15"
+                  ? "border-[#d6ceb8] bg-white/90 text-[#292a24] hover:border-[#454a3a] hover:bg-[#454a3a] hover:text-white hover:shadow-md"
+                  : "border-white/30 bg-black/20 text-white hover:border-white/70 hover:bg-white hover:text-[#292a24] hover:shadow-md"
               }`}
-              style={{
-                fontSize: "var(--text-xs)",
-                textShadow: solid ? undefined : "0 1px 4px rgba(0,0,0,0.4)",
-              }}
             >
-              Minhas Reservas
+              <User
+                className={`size-3.5 text-[#bd9a5f] transition-transform duration-200 group-hover:scale-110 ${
+                  solid ? "group-hover:text-[#f1e6cf]" : ""
+                }`}
+              />
+              <span className="hidden sm:inline transition-colors duration-200">
+                {isAuthenticated ? "Minha Conta" : "Minhas Reservas"}
+              </span>
             </button>
             <a
               href="#quartos"
-              className="hidden lg:inline-flex h-10 px-6 items-center justify-center rounded-sm font-semibold uppercase tracking-[0.14em] text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition-colors"
-              style={{ fontSize: "var(--text-xs)" }}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-5 py-2.5 text-xs font-medium tracking-wide text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md active:scale-95"
             >
-              Reservar
+              Reservar estadia
             </a>
             <button
               type="button"
@@ -180,25 +182,28 @@ export default function Header() {
                 {link.label}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                openPortal();
-              }}
-              className="mt-2 h-11 inline-flex items-center justify-center rounded-sm font-semibold uppercase tracking-[0.14em] border border-[#bd9a5f] text-[#a8843f] hover:bg-[#f1e6cf]/40 transition-colors"
-              style={{ fontSize: "var(--text-xs)" }}
-            >
-              Minhas Reservas
-            </button>
-            <a
-              href="#quartos"
-              className="mt-2 h-11 inline-flex items-center justify-center rounded-sm text-white font-semibold uppercase tracking-[0.14em] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]"
-              style={{ fontSize: "var(--text-xs)" }}
-              onClick={() => setMenuOpen(false)}
-            >
-              Reservar
-            </a>
+            <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  openPortal();
+                }}
+                className="group flex items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-white py-3 text-sm font-medium text-[var(--color-text)] transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md active:scale-95 cursor-pointer"
+              >
+                <User className="size-4 text-[var(--color-accent)] transition-transform duration-200 group-hover:scale-110 group-hover:text-white" />
+                <span className="transition-colors duration-200">
+                  {isAuthenticated ? "Minha Conta" : "Minhas Reservas"}
+                </span>
+              </button>
+              <a
+                href="#quartos"
+                className="text-center rounded-full bg-[var(--color-primary)] py-3 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)] active:scale-95"
+                onClick={() => setMenuOpen(false)}
+              >
+                Reservar estadia
+              </a>
+            </div>
           </nav>
         )}
       </div>
