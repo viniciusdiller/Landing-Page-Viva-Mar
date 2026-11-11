@@ -227,8 +227,9 @@ export async function POST(request: NextRequest) {
     // Log detalhado só no servidor — a resposta é pública (qualquer um pode
     // chamar essa rota diretamente), então não devolve detalhes internos.
     console.error("Erro ao processar webhook do Mercado Pago:", error);
-    // Sempre 200 aqui: um 4xx/5xx faz o Mercado Pago reenviar a notificação
-    // indefinidamente. O erro já foi logado para investigação manual.
-    return NextResponse.json({ ok: false, error: "Erro ao processar notificação." }, { status: 200 });
+    // 503 para o Mercado Pago reenviar: o Admin deduplica por paymentReference
+    // (mp_<id>), então a repetição é segura. Com 200, um 401/falha de rede no
+    // Admin deixaria o pagamento aprovado sem reserva e sem nova tentativa.
+    return NextResponse.json({ ok: false, error: "Erro ao processar notificação." }, { status: 503 });
   }
 }
