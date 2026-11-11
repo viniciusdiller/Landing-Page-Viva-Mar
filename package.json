@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start -p 3002",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "node --test tests/masks.test.mjs"
   },
   "dependencies": {
     "@mercadopago/sdk-react": "^0.0.18",
