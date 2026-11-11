@@ -240,7 +240,7 @@ export default function GuestPortalModal() {
 
       {/* Modal Container */}
       <div
-        className={`relative w-full max-w-2xl rounded-3xl bg-[var(--color-bg)] border border-[var(--color-border)] shadow-2xl overflow-hidden z-10 my-auto text-[var(--color-text)] ${
+        className={`guest-portal-modal relative w-full max-w-2xl rounded-3xl bg-[var(--color-bg)] border border-[var(--color-border)] shadow-2xl overflow-hidden z-10 my-auto text-[var(--color-text)] ${
           actionType === "reschedule" ? "min-h-[500px]" : ""
         }`}
       >

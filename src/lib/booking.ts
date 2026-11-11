@@ -15,3 +15,11 @@ export function calcNights(checkIn: string, checkOut: string): number {
 export function formatBRL(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 }
+
+/** Código de consulta mostrado ao hóspede (o mesmo aceito no campo de busca), ex.: VIVA-1042. */
+export function formatReservationCode(id: number | string): string {
+  const str = String(id).trim();
+  if (/^VIVA-\d+$/i.test(str)) return str.toUpperCase();
+  const digits = str.match(/\d+/);
+  return digits ? `VIVA-${digits[0]}` : `VIVA-${str}`;
+}
