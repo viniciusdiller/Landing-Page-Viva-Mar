@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPayment } from "@/lib/mercadopago";
+import { confirmReservationFromMetadata } from "@/lib/confirm-reservation";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 const NUMERIC_ID = /^\d+$/;
@@ -39,6 +40,17 @@ export async function GET(
 
     if (payment.externalReference !== token) {
       return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+    }
+
+    if (payment.status === "approved" && payment.metadata?.room_id) {
+      try {
+        await confirmReservationFromMetadata(payment.metadata, payment.id);
+      } catch (confirmError) {
+        console.error(
+          "Erro ao confirmar reserva durante polling de status Pix:",
+          confirmError,
+        );
+      }
     }
 
     return NextResponse.json({ status: payment.status }, { status: 200 });
