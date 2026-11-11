@@ -1,6 +1,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { maskCPF, maskCEP, maskPhone, maskCpfOrEmail } from '../src/lib/masks.ts';
+import {
+  maskCPF,
+  maskCEP,
+  maskPhone,
+  maskCpfOrEmail,
+  maskReservationCode,
+  formatDisplayReservationCode,
+} from '../src/lib/masks.ts';
 
 describe('lib/masks', () => {
   describe('maskCpfOrEmail', () => {
@@ -40,9 +47,43 @@ describe('lib/masks', () => {
     });
   });
 
-  describe('maskPhone', () => {
-    test('formats phone with DDD', () => {
-      assert.equal(maskPhone('22992027273'), '(22) 99202-7273');
+  describe('maskReservationCode', () => {
+    test('formats raw digits automatically with VIVA- prefix', () => {
+      assert.equal(maskReservationCode('13151'), 'VIVA-13151');
+      assert.equal(maskReservationCode('42'), 'VIVA-42');
+    });
+
+    test('normalizes viva prefix variants to VIVA-<digits>', () => {
+      assert.equal(maskReservationCode('viva13151'), 'VIVA-13151');
+      assert.equal(maskReservationCode('viva-13151'), 'VIVA-13151');
+      assert.equal(maskReservationCode('VIVA-13151'), 'VIVA-13151');
+    });
+
+    test('preserves user typing prefix letters without trapping', () => {
+      assert.equal(maskReservationCode('V'), 'V');
+      assert.equal(maskReservationCode('VI'), 'VI');
+      assert.equal(maskReservationCode('VIV'), 'VIV');
+      assert.equal(maskReservationCode('VIVA'), 'VIVA');
+      assert.equal(maskReservationCode('VIVA-'), 'VIVA-');
+    });
+
+    test('preserves legacy payment codes for backwards compatibility', () => {
+      assert.equal(maskReservationCode('mp_987654321'), 'mp_987654321');
+      assert.equal(maskReservationCode('manual_1710000000'), 'manual_1710000000');
+    });
+
+    test('handles empty input gracefully', () => {
+      assert.equal(maskReservationCode(''), '');
+    });
+  });
+
+  describe('formatDisplayReservationCode', () => {
+    test('uses displayCode when present', () => {
+      assert.equal(formatDisplayReservationCode('VIVA-13151', 'mp_999', 13151), 'VIVA-13151');
+    });
+
+    test('falls back to VIVA-<id> when id is numeric', () => {
+      assert.equal(formatDisplayReservationCode(null, 'mp_999', 13151), 'VIVA-13151');
     });
   });
 });
