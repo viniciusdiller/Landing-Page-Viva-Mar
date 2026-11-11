@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useGuest } from "@/lib/guest-context";
 
 const SCROLL_THRESHOLD = 60;
 
@@ -32,6 +33,7 @@ function WaveMark() {
 }
 
 export default function Header() {
+  const { openPortal } = useGuest();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -124,6 +126,21 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={openPortal}
+              className={`inline-flex h-10 px-4 items-center justify-center rounded-sm font-semibold uppercase tracking-[0.12em] transition-colors border ${
+                solid
+                  ? "border-[#bd9a5f] text-[#a8843f] hover:bg-[#f1e6cf]/40"
+                  : "border-white/80 text-white hover:bg-white/15"
+              }`}
+              style={{
+                fontSize: "var(--text-xs)",
+                textShadow: solid ? undefined : "0 1px 4px rgba(0,0,0,0.4)",
+              }}
+            >
+              Minhas Reservas
+            </button>
             <a
               href="#quartos"
               className="hidden lg:inline-flex h-10 px-6 items-center justify-center rounded-sm font-semibold uppercase tracking-[0.14em] text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition-colors"
@@ -163,6 +180,17 @@ export default function Header() {
                 {link.label}
               </a>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                openPortal();
+              }}
+              className="mt-2 h-11 inline-flex items-center justify-center rounded-sm font-semibold uppercase tracking-[0.14em] border border-[#bd9a5f] text-[#a8843f] hover:bg-[#f1e6cf]/40 transition-colors"
+              style={{ fontSize: "var(--text-xs)" }}
+            >
+              Minhas Reservas
+            </button>
             <a
               href="#quartos"
               className="mt-2 h-11 inline-flex items-center justify-center rounded-sm text-white font-semibold uppercase tracking-[0.14em] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]"

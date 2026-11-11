@@ -209,3 +209,42 @@ export interface RoomSearchParams {
   checkOut: string;
   guests: number;
 }
+
+// --- PORTAL DO HÓSPEDE ---
+export interface GuestUser {
+  id: number;
+  email: string;
+  name: string;
+  phone?: string | null;
+}
+
+export interface GuestReservation {
+  id: number;
+  reservationId: string;
+  roomId: string;
+  roomName: string;
+  roomPhotos: string[];
+  minStayNights?: number;
+  checkIn: string;
+  checkOut: string;
+  status: "confirmed" | "pending" | "cancelled" | "blocked";
+  amount: number;
+  currency: string;
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  guestCpf?: string;
+  notes?: string;
+  unitNumber?: number;
+  createdAt?: string;
+}
+
+export interface GuestAuthResponse {
+  ok: boolean;
+  token?: string;
+  guest?: GuestUser;
+  reservations?: GuestReservation[];
+  error?: string;
+  message?: string;
+}
+

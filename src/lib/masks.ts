@@ -29,3 +29,16 @@ export function maskCEP(value: string): string {
     .slice(0, 8)
     .replace(/(\d{5})(\d)/, "$1-$2");
 }
+
+export function maskCpfOrEmail(value: string): string {
+  const [, head, rest] = value.match(/^([\d.-]*)([\s\S]*)$/) ?? ["", "", value];
+
+  if (rest === "") {
+    const digits = onlyDigits(head);
+    return digits.length > 11 ? digits : maskCPF(digits);
+  }
+
+  const digits = onlyDigits(head);
+  const isOurMask = digits.length <= 11 && head === maskCPF(digits);
+  return (isOurMask ? digits : head) + rest;
+}

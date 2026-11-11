@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { GuestProvider } from "@/lib/guest-context";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
@@ -89,7 +90,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <GuestProvider>{children}</GuestProvider>
+      </body>
     </html>
   );
 }

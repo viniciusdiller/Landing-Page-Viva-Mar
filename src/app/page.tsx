@@ -9,6 +9,7 @@ import LeisureSection from "@/components/LeisureSection";
 import Gallery from "@/components/Gallery";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import GuestPortalModal from "@/components/GuestPortalModal";
 import type { RoomSearchParams } from "@/types";
 import Map from "@/components/Map";
 
@@ -44,6 +45,7 @@ export default function LandingPage() {
       <Map />
       <Footer />
       <WhatsAppButton />
+      <GuestPortalModal />
     </main>
   );
 }

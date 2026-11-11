@@ -1,6 +1,10 @@
+"use client";
+
 import { Instagram, Facebook, Mail, Phone } from "lucide-react";
+import { useGuest } from "@/lib/guest-context";
 
 export default function Footer() {
+  const { openPortal } = useGuest();
   return (
     <footer
       id="footer"
@@ -47,6 +51,15 @@ export default function Footer() {
                 <a href="#quartos" className="hover:text-[var(--color-text)]">
                   Quartos
                 </a>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={openPortal}
+                  className="hover:text-[var(--color-text)] text-left"
+                >
+                  Minhas Reservas
+                </button>
               </li>
             </ul>
           </div>

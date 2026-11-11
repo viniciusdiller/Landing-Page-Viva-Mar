@@ -124,10 +124,19 @@ function buildReservationNotes(metadata: Record<string, unknown>, paymentId: num
 async function confirmReservation(metadata: Record<string, unknown>, paymentId: number) {
   const baseUrl = getApiBaseUrl();
   const guestName = `${metadata.guest_first_name || ""} ${metadata.guest_last_name || ""}`.trim();
+  const internalSecret = process.env.INTERNAL_API_SECRET;
 
   const response = await fetch(`${baseUrl}/api/public/viva-mar`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(internalSecret
+        ? {
+            Authorization: `Bearer ${internalSecret}`,
+            "X-Internal-Secret": internalSecret,
+          }
+        : {}),
+    },
     body: JSON.stringify({
       roomId: metadata.room_id,
       checkIn: metadata.check_in,
