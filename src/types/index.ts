@@ -221,6 +221,7 @@ export interface GuestUser {
 export interface GuestReservation {
   id: number;
   reservationId: string;
+  displayCode?: string;
   roomId: string;
   roomName: string;
   roomPhotos: string[];

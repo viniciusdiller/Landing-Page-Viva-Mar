@@ -31,7 +31,10 @@ export function maskCEP(value: string): string {
 }
 
 export function maskCpfOrEmail(value: string): string {
-  const [, head, rest] = value.match(/^([\d.-]*)([\s\S]*)$/) ?? ["", "", value];
+  if (!value) return "";
+  const trimmed = value.trim();
+
+  const [, head, rest] = trimmed.match(/^([\d.-]*)([\s\S]*)$/) ?? ["", "", trimmed];
 
   if (rest === "") {
     const digits = onlyDigits(head);
@@ -40,5 +43,58 @@ export function maskCpfOrEmail(value: string): string {
 
   const digits = onlyDigits(head);
   const isOurMask = digits.length <= 11 && head === maskCPF(digits);
-  return (isOurMask ? digits : head) + rest;
+  return ((isOurMask ? digits : head) + rest).toLowerCase();
+}
+
+export function maskReservationCode(value: string): string {
+  if (!value) return "";
+  const trimmed = value.trim();
+
+  // Preserva identificadores técnicos legados caso o hóspede cole do comprovante
+  if (/^(mp_|manual_)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const clean = trimmed.toUpperCase().replace(/\s+/g, "");
+
+  // Usuário digitando as primeiras letras do prefixo
+  if (clean === "V" || clean === "VI" || clean === "VIV" || clean === "VIVA") {
+    return clean;
+  }
+
+  // Padrão VIVA- com dígitos
+  const vivaMatch = clean.match(/^VIVA[-_]?(\d*)$/);
+  if (vivaMatch) {
+    const digits = vivaMatch[1].slice(0, 10);
+    return digits ? `VIVA-${digits}` : "VIVA-";
+  }
+
+  // Se são apenas dígitos digitados pelo hóspede, formata automaticamente
+  if (/^\d+$/.test(clean)) {
+    return `VIVA-${clean.slice(0, 10)}`;
+  }
+
+  // Fallback seguro alfanumérico
+  return clean.replace(/[^A-Z0-9#_\-]/g, "").slice(0, 25);
+}
+
+export function formatDisplayReservationCode(
+  displayCode?: string | null,
+  reservationId?: string | number | null,
+  id?: number | string | null
+): string {
+  if (displayCode && displayCode.trim()) {
+    return displayCode.trim().toUpperCase();
+  }
+  if (id && /^\d+$/.test(String(id))) {
+    return `VIVA-${id}`;
+  }
+  const str = String(reservationId || "").trim();
+  if (str.toUpperCase().startsWith("VIVA-")) {
+    return str.toUpperCase();
+  }
+  if (id) {
+    return `VIVA-${id}`;
+  }
+  return str || "VIVA";
 }
