@@ -26,9 +26,9 @@ describe('lib/masks', () => {
       assert.equal(maskCpfOrEmail('1234a@x.com'), '1234a@x.com');
     });
 
-    test('does not truncate numeric emails with more than 11 digits', () => {
-      assert.equal(maskCpfOrEmail('123456789012'), '123456789012');
-      assert.equal(maskCpfOrEmail('123456789012@x.com'), '123456789012@x.com');
+    test('caps pure numeric input at 11 digits with CPF mask and unmasks when @ or letter is typed', () => {
+      assert.equal(maskCpfOrEmail('123456789012345'), '123.456.789-01');
+      assert.equal(maskCpfOrEmail('123.456.789-01@x.com'), '12345678901@x.com');
     });
 
     test('handles empty input and deletions', () => {

@@ -32,15 +32,17 @@ export function maskCEP(value: string): string {
 
 export function maskCpfOrEmail(value: string): string {
   if (!value) return "";
-  const trimmed = value.trim();
+  const clean = value.replace(/\s+/g, "");
 
-  const [, head, rest] = trimmed.match(/^([\d.-]*)([\s\S]*)$/) ?? ["", "", trimmed];
-
-  if (rest === "") {
-    const digits = onlyDigits(head);
-    return digits.length > 11 ? digits : maskCPF(digits);
+  // Enquanto não houver letras ou "@" (apenas dígitos, pontos e traços),
+  // aplica estritamente a máscara de CPF (000.000.000-00, limitado a 11 dígitos).
+  if (!/[a-zA-Z@_]/.test(clean)) {
+    return maskCPF(clean);
   }
 
+  // Se o usuário digitou letra ou "@", trata como e-mail e desfaz
+  // pontos/traços que a máscara de CPF tenha inserido nos dígitos iniciais.
+  const [, head, rest] = clean.match(/^([\d.-]*)([\s\S]*)$/) ?? ["", "", clean];
   const digits = onlyDigits(head);
   const isOurMask = digits.length <= 11 && head === maskCPF(digits);
   return ((isOurMask ? digits : head) + rest).toLowerCase();
