@@ -161,26 +161,9 @@ export default function GuestPortalModal() {
     }
   };
 
-  // Remarcar reserva
+  // Remarcar reserva (toda validação de negócio é feita pelo backend)
   const handleConfirmReschedule = async () => {
-    if (!token || !selectedReservation || !newCheckIn || !newCheckOut) {
-      setActionError("Informe as novas datas de check-in e check-out.");
-      return;
-    }
-
-    if (new Date(newCheckOut) <= new Date(newCheckIn)) {
-      setActionError("A data de check-out deve ser posterior ao check-in.");
-      return;
-    }
-
-    const nights = calcNights(newCheckIn, newCheckOut);
-    const minNights = selectedReservation.minStayNights || 1;
-    if (nights < minNights) {
-      setActionError(
-        `Esta acomodação exige um mínimo de ${minNights} ${minNights === 1 ? "noite" : "noites"} para reserva.`
-      );
-      return;
-    }
+    if (!token || !selectedReservation) return;
 
     setActionLoading(true);
     setActionError(null);
@@ -631,10 +614,42 @@ export default function GuestPortalModal() {
                   </p>
 
                   {actionError && (
-                    <div className="mt-3 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700">
-                      <AlertCircle className="size-4 shrink-0" />
-                      <span>{actionError}</span>
-                    </div>
+                    actionError.includes("gestão") ? (
+                      <div className="mt-4 rounded-2xl border border-[#e2cfa9] bg-[#faf4e8] p-3.5 text-xs text-[#5c4924] shadow-xs">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="size-4 shrink-0 text-[#a8843f] mt-0.5" />
+                          <div className="space-y-2 flex-1">
+                            <p className="font-semibold text-[#473719]">
+                              Alteração na quantidade de diárias
+                            </p>
+                            <p className="leading-relaxed text-[#5c4924]">
+                              {actionError}
+                            </p>
+                            <a
+                              href={`https://wa.me/5522992917331?text=${encodeURIComponent(
+                                `Olá! Gostaria de remarcar minha reserva ${formatReservationCode(
+                                  selectedReservation.id
+                                )} (${selectedReservation.roomName}) alterando a quantidade de diárias para o período de ${newCheckIn
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")} a ${newCheckOut.split("-").reverse().join("/")}.`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#454a3a] px-3 py-1.5 text-[11px] font-medium text-white hover:bg-[#5c6152] transition-colors"
+                            >
+                              <span>Falar com a Gestão no WhatsApp</span>
+                              <ArrowRight className="size-3" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700">
+                        <AlertCircle className="size-4 shrink-0" />
+                        <span>{actionError}</span>
+                      </div>
+                    )
                   )}
 
                   {actionSuccess && (
@@ -645,13 +660,6 @@ export default function GuestPortalModal() {
                   )}
 
                   <div className="mt-4 space-y-3">
-                    {selectedReservation.minStayNights && selectedReservation.minStayNights > 1 && (
-                      <div className="rounded-xl bg-[#f4ece1] border border-[#e5dec9] p-2.5 text-[11px] text-[#5c4924]">
-                        Esta acomodação exige um mínimo de{" "}
-                        <strong>{selectedReservation.minStayNights} noites</strong> por reserva.
-                      </div>
-                    )}
-
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-[11px] font-medium uppercase text-[var(--color-text-muted)]">
@@ -669,11 +677,11 @@ export default function GuestPortalModal() {
                         onChange={(e) => {
                           const date = e.target.value;
                           setNewCheckIn(date);
-                          const minStay = Math.max(1, selectedReservation.minStayNights || 1);
+                          setActionError(null);
                           if (date) {
-                            const minOutStr = addDaysISO(date, minStay);
-                            if (!newCheckOut || newCheckOut < minOutStr) {
-                              setNewCheckOut(minOutStr);
+                            const nextDayStr = addDaysISO(date, 1);
+                            if (!newCheckOut || newCheckOut <= date) {
+                              setNewCheckOut(nextDayStr);
                             }
                           }
                         }}
@@ -695,24 +703,38 @@ export default function GuestPortalModal() {
                         required
                         min={
                           newCheckIn
-                            ? addDaysISO(newCheckIn, Math.max(1, selectedReservation.minStayNights || 1))
-                            : addDaysISO(todayISO, Math.max(1, selectedReservation.minStayNights || 1))
+                            ? addDaysISO(newCheckIn, 1)
+                            : addDaysISO(todayISO, 1)
                         }
                         value={newCheckOut}
-                        onChange={(e) => setNewCheckOut(e.target.value)}
+                        onChange={(e) => {
+                          setNewCheckOut(e.target.value);
+                          setActionError(null);
+                        }}
                         className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-semibold text-[var(--color-text)] outline-none transition-all duration-200 hover:border-[#5c6152] focus:border-[#5c6152] cursor-pointer"
                       />
                     </div>
 
-                    {newCheckIn && newCheckOut && new Date(newCheckOut) > new Date(newCheckIn) && (
-                      <div className="text-[11px] text-[var(--color-text-muted)] text-center pt-1">
-                        Total selecionado:{" "}
-                        <strong>
-                          {calcNights(newCheckIn, newCheckOut)}{" "}
-                          {calcNights(newCheckIn, newCheckOut) === 1 ? "diária" : "diárias"}
+                    <div className="rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] px-3 py-2 flex items-center justify-between text-[11px] text-[var(--color-text-muted)]">
+                      <span>
+                        Reserva original:{" "}
+                        <strong className="text-[var(--color-text)]">
+                          {calcNights(selectedReservation.checkIn, selectedReservation.checkOut)}{" "}
+                          {calcNights(selectedReservation.checkIn, selectedReservation.checkOut) === 1
+                            ? "diária"
+                            : "diárias"}
                         </strong>
-                      </div>
-                    )}
+                      </span>
+                      {newCheckIn && newCheckOut && new Date(newCheckOut) > new Date(newCheckIn) && (
+                        <span>
+                          Selecionado:{" "}
+                          <strong className="text-[var(--color-text)]">
+                            {calcNights(newCheckIn, newCheckOut)}{" "}
+                            {calcNights(newCheckIn, newCheckOut) === 1 ? "diária" : "diárias"}
+                          </strong>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mt-6 flex gap-3">
