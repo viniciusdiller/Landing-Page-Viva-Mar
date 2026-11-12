@@ -149,7 +149,9 @@ export default function GuestPortalModal() {
     setActionLoading(false);
 
     if (result.ok) {
-      setActionSuccess("Reserva cancelada com sucesso.");
+      setActionSuccess(
+        result.message || "Reserva cancelada e estorno automático solicitado com sucesso."
+      );
       await loadReservations();
       setTimeout(() => {
         setActionType(null);
@@ -565,11 +567,54 @@ export default function GuestPortalModal() {
                     {selectedReservation.checkOut.slice(0, 10).split("-").reverse().join("/")})?
                   </p>
 
+                  <div className="mt-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] p-3 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+                    Cancelamentos realizados com até{" "}
+                    <strong className="text-[var(--color-text)]">7 dias de antecedência</strong>{" "}
+                    do check-in recebem o estorno integral (
+                    <strong className="text-[var(--color-text)]">
+                      {formatBRL(selectedReservation.amount)}
+                    </strong>
+                    ) automaticamente no mesmo meio de pagamento utilizado.
+                  </div>
+
                   {actionError && (
-                    <div className="mt-3 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700">
-                      <AlertCircle className="size-4 shrink-0" />
-                      <span>{actionError}</span>
-                    </div>
+                    actionError.includes("gestão") ? (
+                      <div className="mt-4 rounded-2xl border border-[#e2cfa9] bg-[#faf4e8] p-3.5 text-xs text-[#5c4924] shadow-xs">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="size-4 shrink-0 text-[#a8843f] mt-0.5" />
+                          <div className="space-y-2 flex-1">
+                            <p className="font-semibold text-[#473719]">
+                              Atendimento direto com a Gestão
+                            </p>
+                            <p className="leading-relaxed text-[#5c4924]">
+                              {actionError}
+                            </p>
+                            <a
+                              href={`https://wa.me/5522992917331?text=${encodeURIComponent(
+                                `Olá! Gostaria de verificar o cancelamento da minha reserva ${formatReservationCode(
+                                  selectedReservation.id
+                                )} (${selectedReservation.roomName}, check-in em ${selectedReservation.checkIn
+                                  .slice(0, 10)
+                                  .split("-")
+                                  .reverse()
+                                  .join("/")}).`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#454a3a] px-3 py-1.5 text-[11px] font-medium text-white hover:bg-[#5c6152] transition-colors"
+                            >
+                              <span>Falar com a Gestão no WhatsApp</span>
+                              <ArrowRight className="size-3" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700">
+                        <AlertCircle className="size-4 shrink-0" />
+                        <span>{actionError}</span>
+                      </div>
+                    )
                   )}
 
                   {actionSuccess && (
