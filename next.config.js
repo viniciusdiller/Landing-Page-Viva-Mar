@@ -2,19 +2,13 @@
 // produção usa o domínio/IP real do cliente) — incluída explicitamente na
 // CSP pra imagens dos quartos e chamadas fetch funcionarem sem precisar
 // liberar https: genérico.
+const isDev = process.env.NODE_ENV !== "production";
+
 const apiOrigin = (
   process.env.NEXT_PUBLIC_VIVAMAR_API_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
-  ""
+  (isDev ? "http://localhost:3003" : "")
 ).replace(/\/$/, "");
-
-// O webpack dev server do Next (next dev) usa eval() pra montar os source
-// maps/Fast Refresh — sem 'unsafe-eval' em dev, o CSP bloqueia o bundle
-// inteiro de rodar (a página fica com a casca estática só, nada de JS
-// client-side executa: nenhum fetch dispara, tudo parece "carregando pra
-// sempre"). Em produção (next build) isso não é necessário — mantém a CSP
-// mais restrita lá.
-const isDev = process.env.NODE_ENV !== "production";
 
 const csp = [
   "default-src 'self'",
