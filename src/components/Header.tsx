@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Menu, X, User } from "lucide-react";
 import { useGuest } from "@/lib/guest-context";
+import ScrollProgressBar from "@/components/ScrollProgressBar";
 
 const SCROLL_THRESHOLD = 60;
 
@@ -207,6 +208,7 @@ export default function Header() {
           </nav>
         )}
       </div>
+      <ScrollProgressBar />
     </header>
   );
 }

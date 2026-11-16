@@ -12,47 +12,55 @@
 
 :root {
   /* Type scale — fluid clamp() */
-  --text-xs:   clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
-  --text-sm:   clamp(0.875rem, 0.8rem  + 0.35vw, 1rem);
-  --text-base: clamp(1rem,     0.95rem + 0.25vw, 1.125rem);
-  --text-lg:   clamp(1.125rem, 1rem    + 0.75vw, 1.5rem);
-  --text-xl:   clamp(1.5rem,   1.2rem  + 1.25vw, 2.25rem);
-  --text-2xl:  clamp(2rem,     1.2rem  + 2.5vw,  3.5rem);
-  --text-3xl:  clamp(2.5rem,   1rem    + 4vw,    5rem);
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+  --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+  --text-3xl: clamp(2.5rem, 1rem + 4vw, 5rem);
 
   /* 4px spacing system */
-  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
-  --space-4: 1rem;    --space-5: 1.25rem; --space-6: 1.5rem;
-  --space-8: 2rem;    --space-10: 2.5rem; --space-12: 3rem;
-  --space-16: 4rem;   --space-20: 5rem;   --space-24: 6rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
 
   /* Paleta principal — resort natural: cream, verde oliva, dourado areia */
-  --color-bg:             #f3efe6;
-  --color-surface:        #ffffff;
-  --color-surface-2:      #ece6d7;
+  --color-bg: #f3efe6;
+  --color-surface: #ffffff;
+  --color-surface-2: #ece6d7;
   --color-surface-offset: #ddd4bd;
-  --color-border:         oklch(0.4 0.02 95 / 0.14);
-  --color-divider:        oklch(0.4 0.02 95 / 0.09);
+  --color-border: oklch(0.4 0.02 95 / 0.14);
+  --color-divider: oklch(0.4 0.02 95 / 0.09);
 
-  --color-text:           #292a24;
-  --color-text-muted:     #6c6a5c;
-  --color-text-faint:     #a9a596;
-  --color-text-inverse:   #faf8f2;
+  --color-text: #292a24;
+  --color-text-muted: #6c6a5c;
+  --color-text-faint: #a9a596;
+  --color-text-inverse: #faf8f2;
 
-  --color-primary:        #bd9a5f;
-  --color-primary-hover:  #a8843f;
+  --color-primary: #bd9a5f;
+  --color-primary-hover: #a8843f;
   --color-primary-active: #8f6f34;
-  --color-primary-light:  #f1e6cf;
+  --color-primary-light: #f1e6cf;
 
-  --color-secondary:      #5c6152;
+  --color-secondary: #5c6152;
   --color-secondary-dark: #454a3a;
-  --color-secondary-light:#8a8f72;
+  --color-secondary-light: #8a8f72;
 
-  --color-accent:         #bd9a5f;
-  --color-accent-hover:   #a8843f;
+  --color-accent: #bd9a5f;
+  --color-accent-hover: #a8843f;
 
-  --color-success:        #2e7d32;
-  --color-error:          #c62828;
+  --color-success: #2e7d32;
+  --color-error: #c62828;
 
   /* Transitions */
   --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -78,7 +86,13 @@
 }
 
 /* === BASE RESET === */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 html {
   -webkit-font-smoothing: antialiased;
@@ -93,24 +107,22 @@ html {
      position: sticky. */
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
-  scrollbar-color: oklch(0.35 0.02 95 / 0.25) transparent;
-  scrollbar-width: thin;
+}
+
+/* Oculta barra de rolagem lateral mantendo funcionalidade total de scroll */
+html,
+body,
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  display: none;
+  width: 0;
+  height: 0;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background-color: oklch(0.35 0.02 95 / 0.22);
-  border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-primary);
-}
+
 
 body {
   min-height: 100dvh;
@@ -124,10 +136,39 @@ body {
   background-color: var(--color-bg);
 }
 
-img, picture, video, canvas, svg { display: block; max-width: 100%; height: auto; }
-input, button, textarea, select { font: inherit; color: inherit; }
-h1, h2, h3, h4, h5, h6 { text-wrap: balance; line-height: 1.15; font-family: var(--font-display); }
-p, li { text-wrap: pretty; }
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+  line-height: 1.15;
+  font-family: var(--font-display);
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
 
 /* Checkout usa uma tipografia neutra (sans-serif) em vez da serifada do
    resto do site, inclusive nos textos que o Payment Brick do Mercado Pago
@@ -160,13 +201,24 @@ p, li { text-wrap: pretty; }
 /* Campos com menos de 16px fazem o iOS dar zoom ao focar, o que também
    desloca a página pros lados. */
 @media (max-width: 639px) {
-  input, select, textarea { font-size: 16px !important; }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Payment Brick: se o SDK montar o formulário mais de uma vez no mesmo
    container (remontagem rápida / StrictMode), mostra só o primeiro. */
-.payment-brick-wrapper { max-width: 100%; overflow-x: clip; }
-.payment-brick-wrapper > *:not(:first-child) { display: none !important; }
+.payment-brick-wrapper {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.payment-brick-wrapper>*:not(:first-child) {
+  display: none !important;
+}
 
 ::selection {
   background: oklch(from #bd9a5f l c h / 0.25);
@@ -180,7 +232,10 @@ p, li { text-wrap: pretty; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
@@ -194,6 +249,7 @@ p, li { text-wrap: pretty; }
     margin-inline: auto;
     padding-inline: clamp(1rem, 4vw, 2rem);
   }
+
   .container-default {
     max-width: 960px;
     margin-inline: auto;
@@ -217,27 +273,41 @@ p, li { text-wrap: pretty; }
     white-space: nowrap;
     min-height: 44px;
   }
-  .btn:active { transform: scale(0.98); }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
 
   .btn-primary {
     background: var(--color-primary);
     color: #fff;
   }
-  .btn-primary:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-md); }
+
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+    box-shadow: var(--shadow-md);
+  }
 
   .btn-secondary {
     background: transparent;
     color: var(--color-primary);
     border: 1px solid var(--color-primary);
   }
-  .btn-secondary:hover { background: var(--color-primary-light); }
+
+  .btn-secondary:hover {
+    background: var(--color-primary-light);
+  }
 
   .btn-ghost {
     background: transparent;
     color: var(--color-text-muted);
     border: 1px solid var(--color-border);
   }
-  .btn-ghost:hover { background: var(--color-surface-offset); color: var(--color-text); }
+
+  .btn-ghost:hover {
+    background: var(--color-surface-offset);
+    color: var(--color-text);
+  }
 
   .btn-lg {
     padding: 0.875rem 1.75rem;
@@ -254,7 +324,11 @@ p, li { text-wrap: pretty; }
     overflow: hidden;
     transition: box-shadow var(--transition), transform var(--transition);
   }
-  .card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
 
   /* Form inputs */
   .input {
@@ -268,16 +342,25 @@ p, li { text-wrap: pretty; }
     transition: border-color var(--transition), box-shadow var(--transition);
     min-height: 44px;
   }
+
   .input:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px oklch(from #bd9a5f l c h / 0.18);
   }
-  .input::placeholder { color: var(--color-text-faint); }
+
+  .input::placeholder {
+    color: var(--color-text-faint);
+  }
 
   /* Section spacing */
-  .section { padding-block: clamp(4rem, 8vw, 7rem); }
-  .section-sm { padding-block: clamp(2.5rem, 5vw, 4rem); }
+  .section {
+    padding-block: clamp(4rem, 8vw, 7rem);
+  }
+
+  .section-sm {
+    padding-block: clamp(2.5rem, 5vw, 4rem);
+  }
 
   /* Badge */
   .badge {
@@ -291,6 +374,14 @@ p, li { text-wrap: pretty; }
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  .badge-teal { background: var(--color-primary-light); color: var(--color-primary); }
-  .badge-sand { background: #fff4c8; color: #7a6200; }
+
+  .badge-teal {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+
+  .badge-sand {
+    background: #fff4c8;
+    color: #7a6200;
+  }
 }
